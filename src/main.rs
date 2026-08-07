@@ -4,7 +4,7 @@ use cnone::lexer::Lexer;
 use cnone::lexer::Token;
 fn main() {
     let c_code = r#"int main (void) {
-        int kode = 9;/*  cc=[]  */
+        int* kode = 9;/*  cc=[]  */
         float num=0.9*kode; //num=8.1
         return 0; // this means no errors.
 }
