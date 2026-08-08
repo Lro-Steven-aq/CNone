@@ -32,6 +32,7 @@ pub struct Token {
     column: usize,
 }
 
+#[derive(Debug,Clone,PartialEq)]
 pub struct Lexer {
     source: Vec<char>,       //源。
     position: usize,         //当前位置。
@@ -52,6 +53,14 @@ impl Lexer {
      * 注意： 去走到下一个字符的位置，不返回。也不是返回Token。
      */
     fn go_to_next(&mut self) {
+        if self.current == '\n' { //如果是行末，那么就加一行，竖向变为1。
+            self.line += 1; //
+            self.column = 1; //
+        } else {
+            // self.line不变。
+            self.column += 1;
+        }
+
         self.position += 1;
         self.current = self.source.get(self.position).copied().unwrap_or('\0');
     }
@@ -78,16 +87,14 @@ impl Lexer {
         }
     }
     
-    fn read_word(&mut self) -> Token {
-        let line = self.line;
-        let column = self.column;
+    fn read_word(&mut self) -> TokenType {
         let start = self.position;
 
         while self.current.is_alphanumeric() || self.current == '_' {
             self.go_to_next();
         }
         let word: String = self.source[start..self.position].iter().collect();
-        let typ = match word.as_str() {
+        match word.as_str() {
             //先看类型。
             "int" => TokenType::Type(Type::Int),
             "char" => TokenType::Type(Type::Char),
@@ -114,17 +121,14 @@ impl Lexer {
             "sizeof" => TokenType::Keyword(Keyword::Sizeof),
             //如果什么都不是，那么将被认定为合法标识符。
             _ => {TokenType::Identifer(word)},      
-        };
-        Token { typ, line, column }
+        }
     } 
 
     /**
      * *技术、时间问题，现在仅做整数支持。*
      * 不考虑二进制、八进制、十六进制等等的支持。
      */
-    fn read_number(&mut self) -> Token {
-        let line = self.line;
-        let column = self.column;
+    fn read_number(&mut self) -> TokenType {
         let start = self.position;
         let mut is_float = false;
         //仅支持十进制数。
@@ -144,18 +148,15 @@ impl Lexer {
             }
         }
         let number: String = self.source[start..self.position].iter().collect();
-        let typ = if is_float {
+        if is_float {
             TokenType::Constant(Literal::Float(number.parse().unwrap_or(0.0)))
         } else {
             TokenType::Constant(Literal::Interage(number.parse().unwrap_or(0)))
-        };
-        Token { typ, line, column }
+        }
     }
 
     /// 没有\x十六进制转义支持，也没有\o八进制转义支持和\u Unicode支持。
-    fn read_string(&mut self) -> Token {
-        let line = self.line;
-        let column = self.column;
+    fn read_string(&mut self) -> TokenType {
         //此时，其current依旧是'"'，所以需要先跳过这个字符。
         self.go_to_next();
         //使用result来存储最后的结果。
@@ -185,14 +186,11 @@ impl Lexer {
         }
         //同理，也跳过结尾的'"'。
         self.go_to_next();
-        let typ = TokenType::Constant(Literal::String(result));
-        Token { typ, line, column }
+        TokenType::Constant(Literal::String(result))
     }
 
     /// 没有\x十六进制转义支持，也没有\o八进制转义支持和\u Unicode支持。
-    fn read_char(&mut self) -> Token {
-        let line = self.line;
-        let column = self.column;
+    fn read_char(&mut self) -> TokenType {
 
         self.go_to_next(); //skip '
         let _char = if self.current == '\\' {
@@ -214,17 +212,14 @@ impl Lexer {
         self.go_to_next();
         self.go_to_next();
 
-        let typ = TokenType::Constant(Literal::Char(_char));
-        Token { typ, line, column }
+        TokenType::Constant(Literal::Char(_char))
     }
 
-    fn read_operator_or_symbol(&mut self) -> Token {
-        let line = self.line;
-        let column = self.column;
+    fn read_operator_or_symbol(&mut self) -> TokenType {
         let _char = self.current;
         // let next = self.peek(); 
 
-        let typ = match _char {
+        match _char {
             // 先处理operators
             '+' => {
                 self.go_to_next();
@@ -308,6 +303,9 @@ impl Lexer {
                     _ => TokenType::Operater(Operator::Or),
                 }
             },
+            '.' => {
+                self.go_to_next(); TokenType::Operater(Operator::Dot)
+            }
             //再处理symbol
             '(' => {self.go_to_next(); TokenType::Symbol(Symbol::LParen)},
             ')' => {self.go_to_next(); TokenType::Symbol(Symbol::RParen)},
@@ -320,29 +318,25 @@ impl Lexer {
             ':' => {self.go_to_next(); TokenType::Symbol(Symbol::Colon)},
             _ => {
                 self.go_to_next();
-                panic!("Unkonwn TOKEN {} @ character line: {} column: {}",self.current, line, column);
+                panic!("Unkonwn TOKEN {} character line: {} column: {}",self.current, self.line, self.column);
             },
-        };
-        Token { typ, line, column }
+        }
+
     }
 
     pub fn get_next_token(&mut self) -> Token {
         self.skip_whitespace();
 
-        //************* 只记录开始错误的地方，因为这就够了。*******************************
-        let start_line = self.line;
-        let start_column = self.column;
-
         let typ = match self.current {
             '\0' => TokenType::EOF,
-            _char if _char.is_alphabetic() || _char == '_' => return self.read_word(),
-            _char if _char.is_numeric() => return self.read_number(),
-            '"' => return self.read_string(),
-            '\'' => return self.read_char(),
-            _ => return self.read_operator_or_symbol(),
+            _char if _char.is_alphabetic() || _char == '_' => self.read_word(),
+            _char if _char.is_numeric() => self.read_number(),
+            '"' => self.read_string(),
+            '\'' => self.read_char(),
+            _ => self.read_operator_or_symbol(),
         };
-        //专职EOF
-        Token { typ: typ, line: start_line, column: start_column }
+        
+        self.generate_token(typ)
     }
 
 }
@@ -353,5 +347,13 @@ impl Lexer {
 impl Token {
     pub fn get_token_type(&self) ->TokenType {
         self.typ.clone()
+    }
+
+    pub fn get_line(&self) -> usize {
+        self.line
+    }
+
+    pub fn get_column(&self) -> usize {
+        self.column
     }
 }

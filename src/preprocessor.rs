@@ -1,18 +1,30 @@
+use std::collections::HashMap;
 
+
+
+
+#[derive(Debug,Clone,PartialEq)]
+pub enum Macro {
+    Object(String),
+    Function(Vec<String>, String),  // 宏函数
+}
 #[derive(Debug,Clone,PartialEq)]
 pub struct Preprocessor{
     source: String,
+    macros: HashMap<String, Macro>,
 }
 
 impl Preprocessor {
     pub fn new(source: &str) -> Self {
-        Self { source: source.to_string() }
+        Self { source: source.to_string(), macros: HashMap::new() }
     }
+
     pub fn preprocess(&mut self) -> &str {
         self.remove_comments();
-        self.process_command();
+        self.process_macros();
         return &self.source;
     }
+
     fn remove_comments(&mut self) {
         let content = self.source.clone();
         let mut chars = content.chars().peekable();
@@ -35,7 +47,11 @@ impl Preprocessor {
                         chars.next(); //跳过。
                         let mut prev = '\0';
                         let mut is_end = false;
+                        let mut newline_count = 0;
                         for _c_ in chars.by_ref() {
+                            if _c_ == '\n' {
+                                newline_count += 1;
+                            }
                             if prev == '*' && _c_ == '/' {
                                 //找到了结尾。
                                 is_end = true;
@@ -44,7 +60,13 @@ impl Preprocessor {
                             prev = _c_;
                         }
                         if is_end {
-                            result.push(' ');//改写为空格。
+                            if newline_count != 0{
+                                for _ in 0..newline_count{
+                                    result.push('\n');//改写为空行。
+                                }
+                            } else {
+                                result.push(' '); //改写为空格。
+                            }
                         } else {
                             panic!("Unterminated comments block.");
                         }
@@ -60,8 +82,20 @@ impl Preprocessor {
         self.source = result;
 
     }
-    fn process_command(&mut self) {
-        // TODO
+
+    fn process_macros(&mut self) {
+        /*
+            #include
+            #define
+            #undef
+            #ifdef #ifndef #endif #else #elif #if
+            __FILE__ __LINE__ __DATA__ __TIME__
+            # ##    (字符串化，标记粘贴)
+            \   (行继续)
+         */
+        
+        ////////////////先识别。//////////////////////////
+        
     }
 
 }
