@@ -18,3 +18,7 @@ Lexer:                                                         词法分析
     浮点数、整数精度问题：也许不一样。（不考虑）
 
     3. Token 没有记录行号，语法/语义分析报错难以查找。（考虑）
+# AST:
+#     Root(Program)
+#     |->FunctionDeclartion(ReturnType,ArgumentType)
+    

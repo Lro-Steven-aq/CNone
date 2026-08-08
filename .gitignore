@@ -1,0 +1,6 @@
+# .gitignore
+.git/
+.vscode/
+target/
+Cargo.lock
+compiler-script.py

@@ -7,6 +7,6 @@
 1. 安装[Rust](https://rust-lang.org/)
 2. 然后在目录执行
    ```shell
-    cargo run
+    cargo run--release
    ```
-   main.rs包含了3行C代码，控制台会输出删除注释的结果和词法分析的结果。
+   在 . 目录下，有 .test.c .test2.c 文件，其包含了一定量的C代码，其可以通过这个词法分析。
