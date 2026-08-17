@@ -68,7 +68,6 @@ impl Lexer {
     /**
      * ### 依据当前行号和TokenType的来生成Token
      */
-    #[allow(unused)]
     fn generate_token(&self, typ: TokenType) -> Token {
         Token { typ: typ, line: self.line, column: self.column }
     }
@@ -310,11 +309,12 @@ impl Lexer {
                 self.go_to_next(); 
                 match self.current {
                     '=' => {self.go_to_next(); TokenType::Operater(Operator::XorAssign)},
-                    _ => TokenType::Operater(Operator::Xor),
+                     _ => TokenType::Operater(Operator::Xor),
                 }
+            },
             '~' => {
-                self.go_to_next(); TokenType::Operater(Operator::Tilde)
-            }
+                self.go_to_next(); TokenType::Operater(Operator::LogicNot)
+            },
             //再处理symbol
             '(' => {self.go_to_next(); TokenType::Symbol(Symbol::LParen)},
             ')' => {self.go_to_next(); TokenType::Symbol(Symbol::RParen)},

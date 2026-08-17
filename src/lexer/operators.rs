@@ -9,7 +9,7 @@ pub enum Operator {
     PlusPlus, MinusMinus,
 
     // 赋值 = ，及其变种。(+= -= *= /= %=)
-    Assign, PlusAssign, MinusAssign, StarAssign, SlashAssign, PercentAssign, XorAssign // XorAssign尚未实现。
+    Assign, PlusAssign, MinusAssign, StarAssign, SlashAssign, PercentAssign, XorAssign, // XorAssign尚未实现。
 
     //compare >, <, !=, >=, <=, ==
     Eq, Neq, Lt, Gt, Le, Ge,
