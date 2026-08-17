@@ -87,7 +87,7 @@ impl Lexer {
             "do" => return Token::Keyword(Keyword::Do),
             "return" => return Token::Keyword(Keyword::Return),
             "break" => return Token::Keyword(Keyword::Break),
-            "continue" => return Token::Keyword(Keyword::Case),
+            "continue" => return Token::Keyword(Keyword::Continue),
             "switch" => return Token::Keyword(Keyword::Switch),
             "case" => return Token::Keyword(Keyword::Case),
             "default" => return Token::Keyword(Keyword::Default),
