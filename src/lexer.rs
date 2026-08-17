@@ -113,7 +113,7 @@ impl Lexer {
             "do" => TokenType::Keyword(Keyword::Do),
             "return" => TokenType::Keyword(Keyword::Return),
             "break" => TokenType::Keyword(Keyword::Break),
-            "continue" => TokenType::Keyword(Keyword::Case),
+            "continue" => TokenType::Keyword(Keyword::Continue),
             "switch" => TokenType::Keyword(Keyword::Switch),
             "case" => TokenType::Keyword(Keyword::Case),
             "default" => TokenType::Keyword(Keyword::Default),
