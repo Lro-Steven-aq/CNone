@@ -75,7 +75,7 @@ impl Lexer {
 
     /**
      * 瞥一眼下一个字符。（不跳到下一个字符）
-     * postion 
+     * position 
      */
     fn peek(&self) -> char {
         self.source.get(self.position + 1).copied().unwrap_or('\0')
@@ -196,7 +196,7 @@ impl Lexer {
         let _char = if self.current == '\\' {
             self.go_to_next();
             match self.current {
-                // return to varible '_char'
+                // return to variable '_char'
                 'n' => '\n',
                 't' => '\t',
                 'r' => '\r',
@@ -306,6 +306,15 @@ impl Lexer {
             '.' => {
                 self.go_to_next(); TokenType::Operater(Operator::Dot)
             }
+            '^' => {
+                self.go_to_next(); 
+                match self.current {
+                    '=' => {self.go_to_next(); TokenType::Operater(Operator::XorAssign)},
+                    _ => TokenType::Operater(Operator::Xor),
+                }
+            '~' => {
+                self.go_to_next(); TokenType::Operater(Operator::Tilde)
+            }
             //再处理symbol
             '(' => {self.go_to_next(); TokenType::Symbol(Symbol::LParen)},
             ')' => {self.go_to_next(); TokenType::Symbol(Symbol::RParen)},
@@ -318,7 +327,7 @@ impl Lexer {
             ':' => {self.go_to_next(); TokenType::Symbol(Symbol::Colon)},
             _ => {
                 self.go_to_next();
-                panic!("Unkonwn TOKEN {} character line: {} column: {}",self.current, self.line, self.column);
+                panic!("Unknown TOKEN {} character line: {} column: {}",self.current, self.line, self.column);
             },
         }
 
