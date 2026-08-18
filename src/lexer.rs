@@ -305,16 +305,17 @@ impl Lexer {
             },
             '.' => {
                 self.go_to_next(); TokenType::Operater(Operator::Dot)
-            }
+            },
             '^' => {
                 self.go_to_next(); 
                 match self.current {
                     '=' => {self.go_to_next(); TokenType::Operater(Operator::XorAssign)},
                     _ => TokenType::Operater(Operator::Xor),
                 }
+            },
             '~' => {
                 self.go_to_next(); TokenType::Operater(Operator::Tilde)
-            }
+            },
             //再处理symbol
             '(' => {self.go_to_next(); TokenType::Symbol(Symbol::LParen)},
             ')' => {self.go_to_next(); TokenType::Symbol(Symbol::RParen)},
