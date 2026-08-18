@@ -327,7 +327,7 @@ impl Lexer {
             ',' => {self.go_to_next(); TokenType::Symbol(Symbol::Comma)},
             ':' => {self.go_to_next(); TokenType::Symbol(Symbol::Colon)},
             _ => {
-                self.go_to_next();
+                // self.go_to_next();
                 panic!("Unknown TOKEN {} character line: {} column: {}",self.current, self.line, self.column);
             },
         }
