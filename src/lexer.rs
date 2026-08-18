@@ -68,10 +68,10 @@ impl Lexer {
     /**
      * ### 依据当前行号和TokenType的来生成Token
      */
-    #[allow(unused)]
-    fn generate_token(&self, typ: TokenType) -> Token {
-        Token { typ: typ, line: self.line, column: self.column }
-    }
+    // #[allow(unused)]
+    // fn generate_token(&self, typ: TokenType) -> Token {
+    //     Token { typ: typ, line: self.line, column: self.column }
+    // }
 
     /**
      * 瞥一眼下一个字符。（不跳到下一个字符）
@@ -337,6 +337,9 @@ impl Lexer {
     pub fn get_next_token(&mut self) -> Token {
         self.skip_whitespace();
 
+        let start_line = self.line;
+        let start_col = self.column;
+
         let typ = match self.current {
             '\0' => TokenType::EOF,
             _char if _char.is_alphabetic() || _char == '_' => self.read_word(),
@@ -346,7 +349,12 @@ impl Lexer {
             _ => self.read_operator_or_symbol(),
         };
         
-        self.generate_token(typ)
+        // self.generate_token(typ)    //弃用
+        Token {
+            typ: typ,
+            line: start_line,
+            column:start_col,    //改用开始位置标注
+        }
     }
 
 }
