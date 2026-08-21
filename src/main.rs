@@ -5,6 +5,7 @@ use std::fs;
 use cnone::lexer::TokenType;
 use cnone::preprocessor::Preprocessor;
 use cnone::lexer::Lexer;
+use cnone::ast::Parser;
 fn main() {
     let args = args().collect::<Vec<String>>();
     let file = match args.get(1){
@@ -14,17 +15,20 @@ fn main() {
     let c_code = fs::read_to_string(file).unwrap();
     let mut code = Preprocessor::new(&c_code);
     let mut lexer = Lexer::new(code.preprocess());
-    println!("{:#?}",code);
+    let mut tokens = Vec::new();
+    // println!("{:#?}",code);
     loop {
         let token = lexer.get_next_token();
-        println!("{:?}",token);
+        tokens.push(token.clone());
+
+        // println!("{:?}",token);
 
         if token.get_token_type() == TokenType::EOF {
             break;
         }
-        // match token {
-        //     Token::Constant(l) => println!("{:?}",l),
-        //     _ => (),
-        // }
     }
+
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse();
+    println!("AST: {:#?}", ast);
 }

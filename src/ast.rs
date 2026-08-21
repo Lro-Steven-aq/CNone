@@ -1,10 +1,17 @@
 pub mod program_structure;
 use program_structure::*;
-use crate::lexer::{TokenType, keywords::Keyword, literalvalue::Literal, operators::Operator, symbols::Symbol, types::Type};
+use crate::lexer::TokenType;
+use crate::lexer::keywords::Keyword;
+use crate::lexer::literalvalue::Literal;
+use crate::lexer::operators::Operator;
+use crate::lexer::symbols::Symbol;
+use crate::lexer::types::Type;
 
 use super::lexer::Token;
 
 // 解析器结构体对象。
+#[derive(Debug,Clone,PartialEq)]
+
 pub struct Parser {
     tokens: Vec<Token>,
     position: usize,
@@ -69,7 +76,7 @@ impl Parser {
                 self.advance();
                 T
             },
-            _ => panic!("Expected type !"),
+            _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
         };
         while self.peek() == TokenType::Operater(Operator::Star) {
           self.advance();
@@ -111,7 +118,7 @@ impl Parser {
                     self.advance();
                 },
                 TokenType::Symbol(Symbol::RParen) => break,
-                _ => panic!("Require ',' or ')'"),
+                _ => panic!("Require ',' or ')': {:#?}", self.tokens[self.position]),
             }
         }
         params
@@ -131,7 +138,7 @@ impl Parser {
                     self.advance();
                 },
                 TokenType::Symbol(Symbol::RParen) => break,
-                _ => panic!("Require ',' or ')'"),
+                _ => panic!("Require ',' or ')': {:#?}", self.tokens[self.position]),
             }
         }
         args
@@ -197,7 +204,7 @@ impl Parser {
                 let decl = self.parse_decl();
                 match decl {
                     Decl::Varible(var) => Stmt::VaribleDecl(var),
-                    _ => panic!("Expected variables declarations"),
+                    _ => panic!("Expected variables declarations: {:#?}", self.tokens[self.position]),
                 }
             },
             _ => {
@@ -233,7 +240,7 @@ impl Parser {
         if self.peek() == TokenType::Symbol(expected.clone()) {
             self.advance();
         } else {
-            panic!("Expected {:#?}, got {:#?}.", expected, self.peek());
+            panic!("Expected {:#?}, got {:#?}.", expected, self.tokens[self.position]);
         }
     }
 
@@ -243,7 +250,7 @@ impl Parser {
                 self.advance();
                 identifier
             },
-            _ => panic!("Expected identifier"),
+            _ => panic!("Expected identifier {:#?}", self.tokens[self.position]),
         }
     }
 
@@ -258,7 +265,7 @@ impl Parser {
         while self.peek() == TokenType::Operater(Operator::LogicOr) {
             self.advance();
             let right = self.parse_and();
-            left = Expr::BinaryExp(BinaryOp::Or, left, right);
+            left = Expr::BinaryExp(BinaryOp::Or, Box::new(left), Box::new(right));
         }
         left
     }
@@ -274,18 +281,207 @@ impl Parser {
         left
     }
     // TODO: eq,add,mul,unary,primary
+    fn parse_eq(&mut self) -> Expr {
+        let mut left = self.parse_rel();
+        loop {  /*
+            一直遍历，直至遇见非法字符（也就是遍历结束）
+             */
+            match self.peek() {
+                TokenType::Operater(Operator::Eq) => {
+                    self.advance();
+                    let right = self.parse_rel();
+                    left = Expr::BinaryExp(BinaryOp::Eq, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Neq) => {
+                    self.advance();
+                    let right = self.parse_rel();
+                    left = Expr::BinaryExp(BinaryOp::Ne, Box::new(left), Box::new(right));
+                },
+                _ => break,
 
+            }
+        }
+        left
+    }
 
+    fn parse_rel(&mut self) -> Expr {
+        let mut left = self.parse_add();
 
+        loop {
+            match self.peek() {
+                TokenType::Operater(Operator::Lt) => {
+                    self.advance();
+                    let right = self.parse_add();
+                    left = Expr::BinaryExp(BinaryOp::Lt, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Gt) => {
+                    self.advance();
+                    let right = self.parse_add();
+                    left = Expr::BinaryExp(BinaryOp::Gt, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Le) => {
+                    self.advance();
+                    let right = self.parse_add();
+                    left = Expr::BinaryExp(BinaryOp::Le, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Ge) => {
+                    self.advance();
+                    let right = self.parse_add();
+                    left = Expr::BinaryExp(BinaryOp::Ge, Box::new(left), Box::new(right));
+                },
+                _ => break,
+            }
+        }
+        left
+    }
 
+    fn parse_add(&mut self) -> Expr {
+        let mut left = self.parse_mul();
+        loop {
+            match self.peek() {
+                TokenType::Operater(Operator::Plus) => {
+                    self.advance();
+                    let right = self.parse_mul();
+                    left = Expr::BinaryExp(BinaryOp::Add, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Minus) => {
+                    self.advance();
+                    let right = self.parse_mul();
+                    left = Expr::BinaryExp(BinaryOp::Sub, Box::new(left), Box::new(right));
+                },
+                _ => break,
+            }
+        }
+        left
+    }
 
+    fn parse_mul(&mut self) -> Expr {
+        let mut left = self.parse_unary();
+        loop {
+            match self.peek() {
+                TokenType::Operater(Operator::Star) => {
+                    self.advance();
+                    let right = self.parse_unary();
+                    left = Expr::BinaryExp(BinaryOp::Mul, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Slash) => {
+                    self.advance();
+                    let right = self.parse_unary();
+                    left = Expr::BinaryExp(BinaryOp::Div, Box::new(left), Box::new(right));
+                },
+                TokenType::Operater(Operator::Percent) => {
+                    self.advance();
+                    let right = self.parse_unary();
+                    left = Expr::BinaryExp(BinaryOp::Mod, Box::new(left), Box::new(right));
+                },
+                _ => break,
+            }
+        }
+        left
+    }
 
+    fn parse_unary(&mut self) -> Expr {
+        match self.peek() {
+            TokenType::Operater(Operator::LogicNot) => {
+                self.advance();
+                Expr::UnaryExp(UnaryOp::Not, Box::new(self.parse_unary()))
+            },
+            TokenType::Operater(Operator::Minus) => {
+                self.advance();
+                Expr::UnaryExp(UnaryOp::Neg, Box::new(self.parse_unary()))
+            },
+            TokenType::Operater(Operator::Tilde) => {
+                self.advance();
+                Expr::UnaryExp(UnaryOp::BitNot, Box::new(self.parse_unary()))
+            },
+            TokenType::Operater(Operator::Star) => {
+                self.advance();
+                Expr::UnaryExp(UnaryOp::Deref, Box::new(self.parse_unary()))
+            },
+            TokenType::Operater(Operator::And) => {
+                self.advance();
+                Expr::UnaryExp(UnaryOp::AddressOf, Box::new(self.parse_unary()))
+            },
+            TokenType::Operater(Operator::PlusPlus) => {  
+                //显然，此时必为前缀表达式。（因为先匹配的是++/--，并且匹配到了。）
+                self.advance();
+                Expr::UnaryExp(UnaryOp::PreInc, Box::new(self.parse_unary()))
+            },
+            TokenType::Operater(Operator::MinusMinus) => {
+                self.advance();
+                Expr::UnaryExp(UnaryOp::PreDec, Box::new(self.parse_unary()))
+            },
+            _ => self.parse_postfix(),      //   后缀。
+                // 与前缀表达式同一优先级。
+        }
+    }
+
+    fn parse_postfix(&mut self) -> Expr {
+        let mut expr = self.parse_primary();
+        loop {
+            match self.peek() {
+                // 后缀加
+                TokenType::Operater(Operator::PlusPlus) => {
+                    self.advance();
+                    expr = Expr::UnaryExp(UnaryOp::PostInc, Box::new(expr));
+                },
+                // 后缀减
+                TokenType::Operater(Operator::MinusMinus) => {
+                    self.advance();
+                    expr = Expr::UnaryExp(UnaryOp::PostDec, Box::new(expr));
+                },
+
+                TokenType::Symbol(Symbol::LParen) => {
+                    self.advance();
+                    let args = self.parse_args();
+                    self.expect(Symbol::RParen);
+                    match expr {
+                        Expr::Identifier(function) => {
+                            expr = Expr::CallFunction(function, args);
+                        },
+                        _ => panic!("Invalid function calling : {:#?}", self.tokens[self.position]),
+                    };
+                },
+                TokenType::Symbol(Symbol::LBracket) => {
+                    self.advance();
+                    let index = self.parse_expr();
+                    self.expect(Symbol::RBracket);
+                    expr = Expr::Index(Box::new(expr),Box::new(index));
+                },
+                TokenType::Operater(Operator::Arrow) => {
+                    // ->
+                    self.advance();
+                    let member = self.expect_identifier();
+                    expr = Expr::PointerMember(Box::new(expr), member);
+                },
+                TokenType::Operater(Operator::Dot) => {
+                    self.advance();
+                    let member = self.expect_identifier();
+                    expr = Expr::Member(Box::new(expr), member);
+                },
+                _ => break,
+            }
+        }
+        expr
+    }
         /// 表达式最基本的单位。
     fn parse_primary(&mut self) -> Expr {
         match self.peek() {
-            TokenType::Constant(Literal::Interage(N)) => {
+            TokenType::Constant(Literal::Interage(int)) => {
                 self.advance();
-                Expr::Integer(N)
+                Expr::Integer(int)
+            },
+            TokenType::Constant(Literal::Float(float)) => {
+                self.advance();
+                Expr::Float(float)
+            },
+            TokenType::Constant(Literal::Char(ch)) => {
+                self.advance();
+                Expr::Char(ch)
+            },
+            TokenType::Constant(Literal::String(string)) => {
+                self.advance();
+                Expr::String(string)
             },
             TokenType::Identifer(identifier) => {
                 self.advance();
@@ -305,7 +501,7 @@ impl Parser {
                 self.expect(Symbol::RParen);
                 expr
             },
-            _ => panic!("Unexpected token: {:#?}", self.peek()) // 其他鬼魂直接报错。什么魑魅魍魉管他呢。
+            _ => panic!("Unexpected token: {:#?}", self.tokens[self.position]) // 其他鬼魂直接报错。什么魑魅魍魉管他呢。
 
         }
     }

@@ -17,7 +17,6 @@ Lexer:                                                         词法分析
     字符串前缀没有支持。（不计划）
     浮点数、整数精度问题：也许不一样。（不考虑）
 
-# AST:
-#     Root(Program)
-#     |->FunctionDeclartion(ReturnType,ArgumentType)
+AST:
+    没有函数声明/定义时类型占位的实现。
     
