@@ -1,4 +1,4 @@
-use crate::lexer::types::Type;
+use crate::ast::Type;
 use super::param::Param;
 use super::block::Block;
 use super::expr::Expr;

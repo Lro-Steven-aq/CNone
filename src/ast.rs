@@ -22,10 +22,10 @@ use crate::lexer::keywords::Keyword;
 use crate::lexer::literalvalue::Literal;
 use crate::lexer::operators::Operator;
 use crate::lexer::symbols::Symbol;
-use crate::lexer::types::Type;
+// 再导出，便于使用。
+pub use crate::lexer::types::Type;
 
 use super::lexer::Token;
-
 // 解析器结构体对象。
 #[derive(Debug,Clone,PartialEq)]
 
@@ -89,9 +89,9 @@ impl Parser {
     /// int char void char* int*
     fn parse_type(&mut self) -> Type {
         let mut base_type = match self.peek() {
-            TokenType::Type(T) => {
+            TokenType::Type(t) => {
                 self.advance();
-                T
+                t
             },
             _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
         };
@@ -240,7 +240,7 @@ impl Parser {
     fn peek(&self) -> TokenType {
         self.tokens
             .get(self.position)
-            .map(|T| T.get_token_type().clone())
+            .map(|t| t.get_token_type().clone())
             .unwrap_or(TokenType::EOF)
     }
 

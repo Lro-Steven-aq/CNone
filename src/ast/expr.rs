@@ -1,6 +1,6 @@
 use super::operators::BinaryOp;
 use super::operators::UnaryOp;
-use crate::lexer::types::Type;
+use crate::ast::Type;
 
 #[derive(Debug,Clone,PartialEq)]
 pub enum Expr {
