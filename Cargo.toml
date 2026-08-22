@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cranelift = "0.113"
+cranelift-module = "0.113"
+cranelift-object = "0.113"
+target-lexicon = "0.13"
