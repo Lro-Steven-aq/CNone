@@ -1,5 +1,22 @@
-pub mod program_structure;
-use program_structure::*;
+
+pub mod program;
+pub mod declarations;
+pub mod block;
+pub mod expr;
+pub mod stmt;
+pub mod operators;
+pub mod param;
+
+use program::Program;
+use declarations::Decl;
+use declarations::FunctionDecl;
+use declarations::VaribleDecl;
+use block::Block;
+use expr::Expr;
+use stmt::Stmt;
+use operators::BinaryOp;
+use operators::UnaryOp;
+use param::Param;
 use crate::lexer::TokenType;
 use crate::lexer::keywords::Keyword;
 use crate::lexer::literalvalue::Literal;
