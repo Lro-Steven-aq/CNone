@@ -21,9 +21,5 @@ AST:
     没有函数声明/定义时类型占位的实现。
 IR:
     todo!("更多的即将实现。。。(while, for, continue)"), （在generate_stmt(Stmt)函数里）
-    is_filled() 是私有的，在函数is_block_filled()里面。
     todo!("更多的即将实现。。。(UnaryOp)"),   （在generate_expr(Expr)函数里的match分支的UnaryOp手臂中）
     _ => todo!("更多的即将实现。。。"),    （在generate_expr(Expr)函数里的match最后。）
-    _ => todo!("更多的即将实现。。。（剩下5个位运算）"),  在generate_binary_operator(BinaryOp)函数里面的match最后的分支。
-    
-    

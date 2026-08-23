@@ -1,22 +1,20 @@
-
 use std::collections::HashMap;
 use std::fs;
 
-#[derive(Debug,Copy,Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum IfState {
     Taking,
     Skipping,
     Done,
 }
 
-
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Macro {
     Object(String),
-    Function(Vec<String>, String),  // 宏函数
+    Function(Vec<String>, String), // 宏函数
 }
-#[derive(Debug,Clone,PartialEq)]
-pub struct Preprocessor{
+#[derive(Debug, Clone, PartialEq)]
+pub struct Preprocessor {
     source: String,
     macros: HashMap<String, Macro>,
     if_state: Vec<IfState>,
@@ -24,11 +22,15 @@ pub struct Preprocessor{
 
 impl Preprocessor {
     pub fn new(source: &str) -> Self {
-        Self { source: source.to_string(), macros: HashMap::new(), if_state: Vec::new() }
+        Self {
+            source: source.to_string(),
+            macros: HashMap::new(),
+            if_state: Vec::new(),
+        }
     }
 
     fn is_taking(&self) -> bool {
-        self.if_state.iter().all(|&s| s == IfState::Taking )
+        self.if_state.iter().all(|&s| s == IfState::Taking)
     }
 
     pub fn preprocess(&mut self) -> &str {
@@ -46,16 +48,18 @@ impl Preprocessor {
             if _char == '/' {
                 //先看一下是不是单行注释。"//'
                 match chars.peek() {
-                    Some(&'/') => { //单行注释。
+                    Some(&'/') => {
+                        //单行注释。
                         chars.next(); //跳过第二个"/"
-                        for _c_  in chars.by_ref() {
+                        for _c_ in chars.by_ref() {
                             if _c_ == '\n' {
                                 result.push('\n');
                                 break;
                             }
                         }
-                    },
-                    Some(&'*') => { //多行注释。
+                    }
+                    Some(&'*') => {
+                        //多行注释。
                         chars.next(); //跳过。
                         let mut prev = '\0';
                         let mut is_end = false;
@@ -72,9 +76,9 @@ impl Preprocessor {
                             prev = _c_;
                         }
                         if is_end {
-                            if newline_count != 0{
-                                for _ in 0..newline_count{
-                                    result.push('\n');//改写为空行。
+                            if newline_count != 0 {
+                                for _ in 0..newline_count {
+                                    result.push('\n'); //改写为空行。
                                 }
                             } else {
                                 result.push(' '); //改写为空格。
@@ -82,9 +86,8 @@ impl Preprocessor {
                         } else {
                             panic!("Unterminated comments block.");
                         }
-                    },
+                    }
                     _ => result.push('/'),
-
                 }
             } else {
                 result.push(_char);
@@ -92,26 +95,26 @@ impl Preprocessor {
         }
         //////////
         self.source = result;
-
     }
 
     fn process_macros(&mut self) {
         /*
-            #include
-            #define
-            #undef
-            #ifdef #ifndef #endif
-            
-            #else #elif #if
-            __FILE__ __LINE__ __DATA__ __TIME__
-            # ##    (字符串化，标记粘贴)
-            \   (行继续)
-         */
-        
+           #include
+           #define
+           #undef
+           #ifdef #ifndef #endif
+
+           #else #elif #if
+           __FILE__ __LINE__ __DATA__ __TIME__
+           # ##    (字符串化，标记粘贴)
+           \   (行继续)
+        */
+
         ////////////////先识别。//////////////////////////
-        let lines = self.source
+        let lines = self
+            .source
             .lines()
-            .map(|mm|mm.to_string())
+            .map(|mm| mm.to_string())
             .collect::<Vec<String>>();
         let mut result = String::new();
         let mut i = 0;
@@ -123,7 +126,8 @@ impl Preprocessor {
                 /////////////////// 以#号开头的，就认为是预处理指令。///////////////////////
                 // 是预处理指令。
                 self.handle_macros(trimmed, &mut result);
-            } else if self.is_taking() { // 宏允许的可用代码
+            } else if self.is_taking() {
+                // 宏允许的可用代码
                 result.push_str(&self.expand_macros(&line));
                 result.push('\n');
             }
@@ -143,60 +147,67 @@ impl Preprocessor {
             Some(&"#include") => self.handle_include(parts.get(1), result),
             Some(&"#define") => self.handle_define(&parts[1..]),
             Some(&"#ifdef") => {
-                let condtion = parts.get(1)
-                    .map(|s| self.macros.contains_key(*s)).unwrap_or(false);
+                let condtion = parts
+                    .get(1)
+                    .map(|s| self.macros.contains_key(*s))
+                    .unwrap_or(false);
                 self.push_if_state(condtion);
-    //            self.handle_conditional(&parts[1..]);
-            },
+                //            self.handle_conditional(&parts[1..]);
+            }
             Some(&"#if") => {
                 panic!("暂不支持 if");
-    //            self.push_if_state(false);
-            },
+                //            self.push_if_state(false);
+            }
             Some(&"#ifndef") => {
-                let condtion = parts.get(1)
-                    .map(|s| !self.macros.contains_key(*s)).unwrap_or(true);
+                let condtion = parts
+                    .get(1)
+                    .map(|s| !self.macros.contains_key(*s))
+                    .unwrap_or(true);
                 self.push_if_state(condtion);
-    //            self.handle_conditional(&parts[1..]);
-            },
+                //            self.handle_conditional(&parts[1..]);
+            }
             Some(&"#endif") => {
                 self.handle_endif();
-            },
+            }
             Some(&"#elif") => {
                 self.handle_elif();
-            },
+            }
             Some(&"#else") => {
                 self.handle_else();
-            },
+            }
 
             Some(&"#undef") => {
                 if self.is_taking() {
                     self.handle_undef(parts.get(1));
                 }
-    //            self.handle_undef(parts.get(1))
-            },
+                //            self.handle_undef(parts.get(1))
+            }
             /*
             没有实现： #else #elif #if
              */
             _ => panic!("Unknown macros: {:#?}", parts.get(0)),
-
-        } 
+        }
     }
 
     fn handle_include(&self, path: Option<&&str>, result: &mut String) {
-        let Some(path) = path else { return; };
-        let filepath = path.trim_matches(|p| p == '"' || p == '<' || p == '>' );
+        let Some(path) = path else {
+            return;
+        };
+        let filepath = path.trim_matches(|p| p == '"' || p == '<' || p == '>');
         match fs::read_to_string(filepath) {
             Ok(content) => {
                 let mut pp = Preprocessor::new(&content);
                 let expanded_content = pp.preprocess();
                 result.push_str(expanded_content);
-            },
+            }
             Err(e) => panic!("Cannt open file: {}, err: {}", filepath, e),
         }
     }
 
     fn handle_define(&mut self, parts: &[&str]) {
-        if parts.is_empty() { return; }  // #define 无参
+        if parts.is_empty() {
+            return;
+        } // #define 无参
 
         let name = parts[0].to_string();
         let value = parts[1..].join(" ");
@@ -208,14 +219,12 @@ impl Preprocessor {
 
         for (name, _macro) in &self.macros {
             match _macro {
-
                 Macro::Object(value) => {
                     result = self.replace_word(&result, name, value);
-                },
+                }
                 Macro::Function(_, _) => {
                     // TODO
                 }
-                
             }
         }
         result
@@ -250,7 +259,6 @@ impl Preprocessor {
         result
     }
 
-
     fn handle_undef(&mut self, name: Option<&&str>) {
         // TODO: Impl
         let Some(name) = name else {
@@ -272,16 +280,19 @@ impl Preprocessor {
     }
 
     fn handle_elif(&mut self) {
-        let last = self.if_state.last_mut().expect("[ERROR]  Panic( #elif without #if! )");
+        let last = self
+            .if_state
+            .last_mut()
+            .expect("[ERROR]  Panic( #elif without #if! )");
         match *last {
             IfState::Taking => {
                 //之前在编译，那么现在就是跳过。
                 *last = IfState::Done;
-            },
+            }
             IfState::Skipping => {
                 //之前是跳过，那么现在就是编译。
                 *last = IfState::Taking;
-            },
+            }
             IfState::Done => {
                 //不变。
                 *last = IfState::Done;
@@ -290,22 +301,26 @@ impl Preprocessor {
     }
 
     fn handle_else(&mut self) {
-        let last = self.if_state.last_mut().expect("[ERROR]  Panic( #else without #if )");
+        let last = self
+            .if_state
+            .last_mut()
+            .expect("[ERROR]  Panic( #else without #if )");
         match *last {
             IfState::Taking => *last = IfState::Done,
             IfState::Skipping => *last = IfState::Taking,
-            IfState::Done => {},
+            IfState::Done => {}
         }
     }
 
     fn handle_endif(&mut self) {
-        self.if_state.pop().expect("[ERROR]  Panic( #endif without #if )");
+        self.if_state
+            .pop()
+            .expect("[ERROR]  Panic( #endif without #if )");
     }
 
     /*
-        缺失：#if 求值，defined()函数。
-        defined()不计划支持。
-     */
-
+       缺失：#if 求值，defined()函数。
+       defined()不计划支持。
+    */
 }
 // mod mm {}

@@ -1,24 +1,38 @@
-
-
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOp {
     // +  -    *    /    %
-    Add, Sub, Mul, Div, Mod,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
     // ==  != <  <=  >  >=
-    Eq, Ne, Lt, Le, Gt, Ge,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
     // &&  ||
-    And, Or,
+    And,
+    Or,
     // &      |      ^      <<   >>
-    BitAnd, BitOr, BitXor, Shl, Shr,
+    BitAnd,
+    BitOr,
+    BitXor,
+    Shl,
+    Shr,
 }
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
-    Neg,   // 负号
+    Neg, // 负号
     Not,
     BitNot,
     Deref,
     AddressOf,
-    PreInc, PostInc,
-    PreDec, PostDec,
+    PreInc,
+    PostInc,
+    PreDec,
+    PostDec,
 }

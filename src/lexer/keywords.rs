@@ -1,6 +1,5 @@
-
-#[derive(Debug,Clone,PartialEq)]
-pub enum Keyword{
+#[derive(Debug, Clone, PartialEq)]
+pub enum Keyword {
     If,
     Else,
     For,
@@ -12,6 +11,6 @@ pub enum Keyword{
     Switch,
     Case,
     Default,
-    Goto,     // Warning!
+    Goto, // Warning!
     Sizeof,
 }

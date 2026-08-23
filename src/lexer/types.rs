@@ -1,5 +1,3 @@
-
-
 //记录类型。指的是被分析代码的变量的.
 /*
         比如说：
@@ -15,8 +13,8 @@
             Operater(Assign),
             ...）的类型。
 */
-#[derive(Debug,Clone,PartialEq)]
-pub enum Type{
+#[derive(Debug, Clone, PartialEq)]
+pub enum Type {
     Int,
     Char,
     Float,
@@ -27,5 +25,5 @@ pub enum Type{
     Signed,
     Void,
 
-    Pointer(Box<Type>),   //  不是词法分析应该解析的类型，放在语法分析时处理。
+    Pointer(Box<Type>), //  不是词法分析应该解析的类型，放在语法分析时处理。
 }

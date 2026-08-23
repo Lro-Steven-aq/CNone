@@ -1,20 +1,17 @@
-
 pub mod keywords;
-pub mod types;
+pub mod literalvalue;
 pub mod operators;
 pub mod symbols;
-pub mod literalvalue;
-
-
+pub mod types;
 
 use keywords::Keyword;
-use types::Type;
+use literalvalue::Literal;
 use operators::Operator;
 use symbols::Symbol;
-use literalvalue::Literal;
+use types::Type;
 
-#[derive(Debug,Clone,PartialEq)]
-pub enum TokenType{
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenType {
     //
     Keyword(Keyword),
     Type(Type),
@@ -22,38 +19,45 @@ pub enum TokenType{
     Identifer(String),
     Symbol(Symbol),
     Operater(Operator),
-    EOF,                   // end of file.
+    EOF, // end of file.
 }
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     typ: TokenType,
     line: usize,
     column: usize,
 }
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Lexer {
-    source: Vec<char>,       //源。
-    position: usize,         //当前位置。
-    current: char,           //当前字符。
+    source: Vec<char>, //源。
+    position: usize,   //当前位置。
+    current: char,     //当前字符。
     //current == source[position]恒成立。
     line: usize,
     column: usize,
 }
 
 impl Lexer {
-    pub fn new (source: &str) -> Self {
+    pub fn new(source: &str) -> Self {
         let chars = source.chars().collect::<Vec<char>>();
         let _first = chars.get(0).copied().unwrap_or('\0');
-        Self { source: chars, position: 0, current: _first, line: 1, column: 1 }
-    } 
-    
+        Self {
+            source: chars,
+            position: 0,
+            current: _first,
+            line: 1,
+            column: 1,
+        }
+    }
+
     /**
      * 注意： 去走到下一个字符的位置，不返回。也不是返回Token。
      */
     fn go_to_next(&mut self) {
-        if self.current == '\n' { //如果是行末，那么就加一行，竖向变为1。
+        if self.current == '\n' {
+            //如果是行末，那么就加一行，竖向变为1。
             self.line += 1; //
             self.column = 1; //
         } else {
@@ -64,28 +68,33 @@ impl Lexer {
         self.position += 1;
         self.current = self.source.get(self.position).copied().unwrap_or('\0');
     }
-    
+
     /**
      * ### 依据当前行号和TokenType的来生成Token
      */
     fn generate_token(&self, typ: TokenType) -> Token {
-        Token { typ: typ, line: self.line, column: self.column }
+        Token {
+            typ: typ,
+            line: self.line,
+            column: self.column,
+        }
     }
 
     /**
      * 瞥一眼下一个字符。（不跳到下一个字符）
-     * position 
+     * position
      */
     fn peek(&self) -> char {
         self.source.get(self.position + 1).copied().unwrap_or('\0')
     }
 
     fn skip_whitespace(&mut self) {
-        while self.current.is_whitespace() {  //  如果是空白，
-            self.go_to_next();                //  那么就跳过。
+        while self.current.is_whitespace() {
+            //  如果是空白，
+            self.go_to_next(); //  那么就跳过。
         }
     }
-    
+
     fn read_word(&mut self) -> TokenType {
         let start = self.position;
 
@@ -119,9 +128,9 @@ impl Lexer {
             "goto" => TokenType::Keyword(Keyword::Goto),
             "sizeof" => TokenType::Keyword(Keyword::Sizeof),
             //如果什么都不是，那么将被认定为合法标识符。
-            _ => {TokenType::Identifer(word)},      
+            _ => TokenType::Identifer(word),
         }
-    } 
+    }
 
     /**
      * *技术、时间问题，现在仅做整数支持。*
@@ -139,7 +148,7 @@ impl Lexer {
         }
         if self.current == '.' && self.peek().is_numeric() {
             is_float = true;
-            self.go_to_next();// skip "."
+            self.go_to_next(); // skip "."
 
             //小数部分。尽管，我们还是把整数部分和小数部分一起解析
             while self.current.is_numeric() {
@@ -161,8 +170,10 @@ impl Lexer {
         //使用result来存储最后的结果。
         //不能使用read_word(&self)和read_number(&self)的截取法，因为需要处理转义。
         let mut result = String::new();
-        while self.current != '"' && self.current != '\0' {  //扫描字符串。
-            if self.current == '\\' {                        //因为转义字符需要特殊处理。
+        while self.current != '"' && self.current != '\0' {
+            //扫描字符串。
+            if self.current == '\\' {
+                //因为转义字符需要特殊处理。
                 //先转义处理。\\与其后一个字符连为同一个。
                 //例如：\\n -> \n     \\r -> \r
                 //读取其后一个。
@@ -190,7 +201,6 @@ impl Lexer {
 
     /// 没有\x十六进制转义支持，也没有\o八进制转义支持和\u Unicode支持。
     fn read_char(&mut self) -> TokenType {
-
         self.go_to_next(); //skip '
         let _char = if self.current == '\\' {
             self.go_to_next();
@@ -216,121 +226,203 @@ impl Lexer {
 
     fn read_operator_or_symbol(&mut self) -> TokenType {
         let _char = self.current;
-        // let next = self.peek(); 
+        // let next = self.peek();
 
         match _char {
             // 先处理operators
             '+' => {
                 self.go_to_next();
                 match self.current {
-                    '+' => {self.go_to_next(); TokenType::Operater(Operator::PlusPlus)},
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::PlusAssign)},
+                    '+' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::PlusPlus)
+                    }
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::PlusAssign)
+                    }
                     _ => TokenType::Operater(Operator::Plus),
                 }
-            },
+            }
             '-' => {
                 self.go_to_next();
                 match self.current {
-                    '-' => {self.go_to_next(); TokenType::Operater(Operator::MinusMinus)},
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::MinusAssign)},
-                    '>' => {self.go_to_next(); TokenType::Operater(Operator::Arrow)},
+                    '-' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::MinusMinus)
+                    }
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::MinusAssign)
+                    }
+                    '>' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Arrow)
+                    }
                     _ => TokenType::Operater(Operator::Minus),
                 }
-            },
+            }
             '*' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::StarAssign)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::StarAssign)
+                    }
                     _ => TokenType::Operater(Operator::Star),
                 }
-            },
+            }
             '/' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next();TokenType::Operater(Operator::SlashAssign)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::SlashAssign)
+                    }
                     _ => TokenType::Operater(Operator::Slash),
                 }
-            },
+            }
             '%' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next();TokenType::Operater(Operator::PercentAssign)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::PercentAssign)
+                    }
                     _ => TokenType::Operater(Operator::Percent),
                 }
-            },
+            }
             '=' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::Eq)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Eq)
+                    }
                     _ => TokenType::Operater(Operator::Assign),
                 }
-            },
+            }
             '!' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::Neq)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Neq)
+                    }
                     _ => TokenType::Operater(Operator::LogicNot),
                 }
-            },
+            }
             '<' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::Le)},
-                    '<' => {self.go_to_next(); TokenType::Operater(Operator::Shl)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Le)
+                    }
+                    '<' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Shl)
+                    }
                     _ => TokenType::Operater(Operator::Lt),
                 }
-            },
+            }
             '>' => {
                 self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::Ge)},
-                    '>' => {self.go_to_next(); TokenType::Operater(Operator::Shr)},
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Ge)
+                    }
+                    '>' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::Shr)
+                    }
                     _ => TokenType::Operater(Operator::Gt),
                 }
-            },
+            }
             '&' => {
                 self.go_to_next();
                 match self.current {
-                    '&' => {self.go_to_next(); TokenType::Operater(Operator::LogicAnd)},
+                    '&' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::LogicAnd)
+                    }
                     _ => TokenType::Operater(Operator::And),
                 }
-            },
+            }
             '|' => {
                 self.go_to_next();
                 match self.current {
-                    '|' => {self.go_to_next(); TokenType::Operater(Operator::LogicOr)},
+                    '|' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::LogicOr)
+                    }
                     _ => TokenType::Operater(Operator::Or),
                 }
-            },
+            }
             '.' => {
-                self.go_to_next(); TokenType::Operater(Operator::Dot)
+                self.go_to_next();
+                TokenType::Operater(Operator::Dot)
             }
             '^' => {
-                self.go_to_next(); 
+                self.go_to_next();
                 match self.current {
-                    '=' => {self.go_to_next(); TokenType::Operater(Operator::XorAssign)},
-                     _ => TokenType::Operater(Operator::Xor),
+                    '=' => {
+                        self.go_to_next();
+                        TokenType::Operater(Operator::XorAssign)
+                    }
+                    _ => TokenType::Operater(Operator::Xor),
                 }
-            },
+            }
             '~' => {
-                self.go_to_next(); TokenType::Operater(Operator::LogicNot)
-            },
+                self.go_to_next();
+                TokenType::Operater(Operator::LogicNot)
+            }
             //再处理symbol
-            '(' => {self.go_to_next(); TokenType::Symbol(Symbol::LParen)},
-            ')' => {self.go_to_next(); TokenType::Symbol(Symbol::RParen)},
-            '{' => {self.go_to_next(); TokenType::Symbol(Symbol::LBrace)},
-            '}' => {self.go_to_next(); TokenType::Symbol(Symbol::RBrace)},
-            '[' => {self.go_to_next(); TokenType::Symbol(Symbol::LBracket)},
-            ']' => {self.go_to_next(); TokenType::Symbol(Symbol::RBracket)},
-            ';' => {self.go_to_next(); TokenType::Symbol(Symbol::Semicolon)},
-            ',' => {self.go_to_next(); TokenType::Symbol(Symbol::Comma)},
-            ':' => {self.go_to_next(); TokenType::Symbol(Symbol::Colon)},
+            '(' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::LParen)
+            }
+            ')' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::RParen)
+            }
+            '{' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::LBrace)
+            }
+            '}' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::RBrace)
+            }
+            '[' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::LBracket)
+            }
+            ']' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::RBracket)
+            }
+            ';' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::Semicolon)
+            }
+            ',' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::Comma)
+            }
+            ':' => {
+                self.go_to_next();
+                TokenType::Symbol(Symbol::Colon)
+            }
             _ => {
                 self.go_to_next();
-                panic!("Unknown TOKEN {} character line: {} column: {}",self.current, self.line, self.column);
-            },
+                panic!(
+                    "Unknown TOKEN {} character line: {} column: {}",
+                    self.current, self.line, self.column
+                );
+            }
         }
-
     }
 
     pub fn get_next_token(&mut self) -> Token {
@@ -344,17 +436,13 @@ impl Lexer {
             '\'' => self.read_char(),
             _ => self.read_operator_or_symbol(),
         };
-        
+
         self.generate_token(typ)
     }
-
 }
 
-
-
-
 impl Token {
-    pub fn get_token_type(&self) ->TokenType {
+    pub fn get_token_type(&self) -> TokenType {
         self.typ.clone()
     }
 

@@ -1,16 +1,15 @@
 use std::env::args;
 use std::fs;
 
-
+use cnone::ast::Parser;
+use cnone::lexer::Lexer;
 use cnone::lexer::TokenType;
 use cnone::preprocessor::Preprocessor;
-use cnone::lexer::Lexer;
-use cnone::ast::Parser;
 fn main() {
     let args = args().collect::<Vec<String>>();
-    let file = match args.get(1){
+    let file = match args.get(1) {
         Some(v) => v,
-        None => "./.test.c", 
+        None => "./.test.c",
     };
     let c_code = fs::read_to_string(file).unwrap();
     let mut code = Preprocessor::new(&c_code);

@@ -1,33 +1,32 @@
-
-pub mod program;
-pub mod declarations;
 pub mod block;
+pub mod declarations;
 pub mod expr;
-pub mod stmt;
 pub mod operators;
 pub mod param;
+pub mod program;
+pub mod stmt;
 
-use program::Program;
-use declarations::Decl;
-use declarations::FunctionDecl;
-use declarations::VaribleDecl;
-use block::Block;
-use expr::Expr;
-use stmt::Stmt;
-use operators::BinaryOp;
-use operators::UnaryOp;
-use param::Param;
 use crate::lexer::TokenType;
 use crate::lexer::keywords::Keyword;
 use crate::lexer::literalvalue::Literal;
 use crate::lexer::operators::Operator;
 use crate::lexer::symbols::Symbol;
+use block::Block;
+use declarations::Decl;
+use declarations::FunctionDecl;
+use declarations::VaribleDecl;
+use expr::Expr;
+use operators::BinaryOp;
+use operators::UnaryOp;
+use param::Param;
+use program::Program;
+use stmt::Stmt;
 // 再导出，便于使用。
 pub use crate::lexer::types::Type;
 
 use super::lexer::Token;
 // 解析器结构体对象。
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -36,12 +35,15 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens: tokens, position: 0, }
+        Self {
+            tokens: tokens,
+            position: 0,
+        }
     }
 
     pub fn parse(&mut self) -> Program {
         let mut decls = Vec::new();
-        
+
         while !self.is_eof() {
             decls.push(self.parse_decl());
         }
@@ -53,14 +55,14 @@ impl Parser {
         let name = self.expect_identifier();
 
         if self.peek() == TokenType::Symbol(Symbol::LParen) {
-            /*      
+            /*
             int func(){
                     ^此处是（因此认为是函数
             }
              */
-            self.advance();// 跳过"("
-            let params = self.parse_params();  // params 是指形参，args是指实参。
-            self.expect(Symbol::RParen);  //  ")"
+            self.advance(); // 跳过"("
+            let params = self.parse_params(); // params 是指形参，args是指实参。
+            self.expect(Symbol::RParen); //  ")"
 
             let body = if self.peek() == TokenType::Symbol(Symbol::Semicolon) {
                 self.advance();
@@ -69,20 +71,27 @@ impl Parser {
                 Some(self.parse_block())
             };
 
-            Decl::Function(FunctionDecl { return_type: _type, name: name, params: params, body: body })
+            Decl::Function(FunctionDecl {
+                return_type: _type,
+                name: name,
+                params: params,
+                body: body,
+            })
         } else {
-
             // 变量。
-            let init = if self.peek() == TokenType::Operater(Operator::Assign){
+            let init = if self.peek() == TokenType::Operater(Operator::Assign) {
                 self.advance();
                 Some(self.parse_expr())
             } else {
                 None
             };
             self.expect(Symbol::Semicolon);
-            Decl::Varible(VaribleDecl { typ: _type, name: name, init: init })
+            Decl::Varible(VaribleDecl {
+                typ: _type,
+                name: name,
+                init: init,
+            })
         }
-
     }
 
     /// 解析类型。
@@ -92,12 +101,12 @@ impl Parser {
             TokenType::Type(t) => {
                 self.advance();
                 t
-            },
+            }
             _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
         };
         while self.peek() == TokenType::Operater(Operator::Star) {
-          self.advance();
-          base_type = Type::Pointer(Box::new(base_type));
+            self.advance();
+            base_type = Type::Pointer(Box::new(base_type));
         }
         base_type
     }
@@ -128,12 +137,15 @@ impl Parser {
         loop {
             let _type = self.parse_type();
             let identifier = self.expect_identifier();
-            params.push(Param { typ: _type, name: identifier });
+            params.push(Param {
+                typ: _type,
+                name: identifier,
+            });
 
             match self.peek() {
                 TokenType::Symbol(Symbol::Comma) => {
                     self.advance();
-                },
+                }
                 TokenType::Symbol(Symbol::RParen) => break,
                 _ => panic!("Require ',' or ')': {:#?}", self.tokens[self.position]),
             }
@@ -153,7 +165,7 @@ impl Parser {
             match self.peek() {
                 TokenType::Symbol(Symbol::Comma) => {
                     self.advance();
-                },
+                }
                 TokenType::Symbol(Symbol::RParen) => break,
                 _ => panic!("Require ',' or ')': {:#?}", self.tokens[self.position]),
             }
@@ -162,19 +174,19 @@ impl Parser {
     }
     /// 解析一个代码块。
     /**
-         * ```c
-         * {
-         *   int a;
-         *   float b;
-         *  char ch = 'M';
-         *    }
-         * ```
-    */
+     * ```c
+     * {
+     *   int a;
+     *   float b;
+     *  char ch = 'M';
+     *    }
+     * ```
+     */
     fn parse_block(&mut self) -> Block {
         self.expect(Symbol::LBrace);
         let mut stmts = Vec::new();
         while self.peek() != TokenType::Symbol(Symbol::RBrace) {
-            stmts.push(self.parse_stmt());  // 当下一个不是"}"时，解析、推入语句。
+            stmts.push(self.parse_stmt()); // 当下一个不是"}"时，解析、推入语句。
             // 拼凑起来！！
         }
         self.expect(Symbol::RBrace);
@@ -185,7 +197,8 @@ impl Parser {
     /// Important!
     /// Core!
     fn parse_stmt(&mut self) -> Stmt {
-        match self.peek() {   // 列举一个代码块里面所可能遇见的关键字。
+        match self.peek() {
+            // 列举一个代码块里面所可能遇见的关键字。
             TokenType::Keyword(Keyword::If) => {
                 // if 处理。
                 self.advance();
@@ -203,9 +216,9 @@ impl Parser {
                 };
 
                 Stmt::If(condition, Box::new(then_stmts), else_stmts)
-            },
+            }
             TokenType::Keyword(Keyword::Return) => {
-                self.advance();                                         //  分号。
+                self.advance(); //  分号。
                 let expr = if self.peek() != TokenType::Symbol(Symbol::Semicolon) {
                     Some(self.parse_expr())
                 } else {
@@ -213,29 +226,29 @@ impl Parser {
                 };
                 self.expect(Symbol::Semicolon);
                 Stmt::Return(expr)
-            },
-            TokenType::Symbol(Symbol::LBrace) => {
-                Stmt::Block(self.parse_block())
-            },
+            }
+            TokenType::Symbol(Symbol::LBrace) => Stmt::Block(self.parse_block()),
             TokenType::Type(_) => {
                 let decl = self.parse_decl();
                 match decl {
                     Decl::Varible(var) => Stmt::VaribleDecl(var),
-                    _ => panic!("Expected variables declarations: {:#?}", self.tokens[self.position]),
+                    _ => panic!(
+                        "Expected variables declarations: {:#?}",
+                        self.tokens[self.position]
+                    ),
                 }
-            },
+            }
             _ => {
                 // regard as normal expr
                 let expr = self.parse_expr();
                 self.expect(Symbol::Semicolon);
                 Stmt::Expr(expr)
-            },
-
+            }
         }
     }
 
     ///////////////////////////////辅助方法，不公开。///////////////////////////////////////
-    
+
     ///
     fn peek(&self) -> TokenType {
         self.tokens
@@ -257,7 +270,10 @@ impl Parser {
         if self.peek() == TokenType::Symbol(expected.clone()) {
             self.advance();
         } else {
-            panic!("Expected {:#?}, got {:#?}.", expected, self.tokens[self.position]);
+            panic!(
+                "Expected {:#?}, got {:#?}.",
+                expected, self.tokens[self.position]
+            );
         }
     }
 
@@ -266,14 +282,11 @@ impl Parser {
             TokenType::Identifer(identifier) => {
                 self.advance();
                 identifier
-            },
+            }
             _ => panic!("Expected identifier {:#?}", self.tokens[self.position]),
         }
     }
-
 }
-
-
 
 impl Parser {
     fn parse_or(&mut self) -> Expr {
@@ -300,7 +313,8 @@ impl Parser {
     // TODO: eq,add,mul,unary,primary
     fn parse_eq(&mut self) -> Expr {
         let mut left = self.parse_rel();
-        loop {  /*
+        loop {
+            /*
             一直遍历，直至遇见非法字符（也就是遍历结束）
              */
             match self.peek() {
@@ -308,14 +322,13 @@ impl Parser {
                     self.advance();
                     let right = self.parse_rel();
                     left = Expr::BinaryExp(BinaryOp::Eq, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Neq) => {
                     self.advance();
                     let right = self.parse_rel();
                     left = Expr::BinaryExp(BinaryOp::Ne, Box::new(left), Box::new(right));
-                },
+                }
                 _ => break,
-
             }
         }
         left
@@ -330,22 +343,22 @@ impl Parser {
                     self.advance();
                     let right = self.parse_add();
                     left = Expr::BinaryExp(BinaryOp::Lt, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Gt) => {
                     self.advance();
                     let right = self.parse_add();
                     left = Expr::BinaryExp(BinaryOp::Gt, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Le) => {
                     self.advance();
                     let right = self.parse_add();
                     left = Expr::BinaryExp(BinaryOp::Le, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Ge) => {
                     self.advance();
                     let right = self.parse_add();
                     left = Expr::BinaryExp(BinaryOp::Ge, Box::new(left), Box::new(right));
-                },
+                }
                 _ => break,
             }
         }
@@ -360,12 +373,12 @@ impl Parser {
                     self.advance();
                     let right = self.parse_mul();
                     left = Expr::BinaryExp(BinaryOp::Add, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Minus) => {
                     self.advance();
                     let right = self.parse_mul();
                     left = Expr::BinaryExp(BinaryOp::Sub, Box::new(left), Box::new(right));
-                },
+                }
                 _ => break,
             }
         }
@@ -380,17 +393,17 @@ impl Parser {
                     self.advance();
                     let right = self.parse_unary();
                     left = Expr::BinaryExp(BinaryOp::Mul, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Slash) => {
                     self.advance();
                     let right = self.parse_unary();
                     left = Expr::BinaryExp(BinaryOp::Div, Box::new(left), Box::new(right));
-                },
+                }
                 TokenType::Operater(Operator::Percent) => {
                     self.advance();
                     let right = self.parse_unary();
                     left = Expr::BinaryExp(BinaryOp::Mod, Box::new(left), Box::new(right));
-                },
+                }
                 _ => break,
             }
         }
@@ -402,34 +415,34 @@ impl Parser {
             TokenType::Operater(Operator::LogicNot) => {
                 self.advance();
                 Expr::UnaryExp(UnaryOp::Not, Box::new(self.parse_unary()))
-            },
+            }
             TokenType::Operater(Operator::Minus) => {
                 self.advance();
                 Expr::UnaryExp(UnaryOp::Neg, Box::new(self.parse_unary()))
-            },
+            }
             TokenType::Operater(Operator::Tilde) => {
                 self.advance();
                 Expr::UnaryExp(UnaryOp::BitNot, Box::new(self.parse_unary()))
-            },
+            }
             TokenType::Operater(Operator::Star) => {
                 self.advance();
                 Expr::UnaryExp(UnaryOp::Deref, Box::new(self.parse_unary()))
-            },
+            }
             TokenType::Operater(Operator::And) => {
                 self.advance();
                 Expr::UnaryExp(UnaryOp::AddressOf, Box::new(self.parse_unary()))
-            },
-            TokenType::Operater(Operator::PlusPlus) => {  
+            }
+            TokenType::Operater(Operator::PlusPlus) => {
                 //显然，此时必为前缀表达式。（因为先匹配的是++/--，并且匹配到了。）
                 self.advance();
                 Expr::UnaryExp(UnaryOp::PreInc, Box::new(self.parse_unary()))
-            },
+            }
             TokenType::Operater(Operator::MinusMinus) => {
                 self.advance();
                 Expr::UnaryExp(UnaryOp::PreDec, Box::new(self.parse_unary()))
-            },
-            _ => self.parse_postfix(),      //   后缀。
-                // 与前缀表达式同一优先级。
+            }
+            _ => self.parse_postfix(), //   后缀。
+                                       // 与前缀表达式同一优先级。
         }
     }
 
@@ -441,12 +454,12 @@ impl Parser {
                 TokenType::Operater(Operator::PlusPlus) => {
                     self.advance();
                     expr = Expr::UnaryExp(UnaryOp::PostInc, Box::new(expr));
-                },
+                }
                 // 后缀减
                 TokenType::Operater(Operator::MinusMinus) => {
                     self.advance();
                     expr = Expr::UnaryExp(UnaryOp::PostDec, Box::new(expr));
-                },
+                }
 
                 TokenType::Symbol(Symbol::LParen) => {
                     self.advance();
@@ -455,51 +468,54 @@ impl Parser {
                     match expr {
                         Expr::Identifier(function) => {
                             expr = Expr::CallFunction(function, args);
-                        },
-                        _ => panic!("Invalid function calling : {:#?}", self.tokens[self.position]),
+                        }
+                        _ => panic!(
+                            "Invalid function calling : {:#?}",
+                            self.tokens[self.position]
+                        ),
                     };
-                },
+                }
                 TokenType::Symbol(Symbol::LBracket) => {
                     self.advance();
                     let index = self.parse_expr();
                     self.expect(Symbol::RBracket);
-                    expr = Expr::Index(Box::new(expr),Box::new(index));
-                },
+                    expr = Expr::Index(Box::new(expr), Box::new(index));
+                }
                 TokenType::Operater(Operator::Arrow) => {
                     // ->
                     self.advance();
                     let member = self.expect_identifier();
                     expr = Expr::PointerMember(Box::new(expr), member);
-                },
+                }
                 TokenType::Operater(Operator::Dot) => {
                     self.advance();
                     let member = self.expect_identifier();
                     expr = Expr::Member(Box::new(expr), member);
-                },
+                }
                 _ => break,
             }
         }
         expr
     }
-        /// 表达式最基本的单位。
+    /// 表达式最基本的单位。
     fn parse_primary(&mut self) -> Expr {
         match self.peek() {
             TokenType::Constant(Literal::Interage(int)) => {
                 self.advance();
                 Expr::Integer(int)
-            },
+            }
             TokenType::Constant(Literal::Float(float)) => {
                 self.advance();
                 Expr::Float(float)
-            },
+            }
             TokenType::Constant(Literal::Char(ch)) => {
                 self.advance();
                 Expr::Char(ch)
-            },
+            }
             TokenType::Constant(Literal::String(string)) => {
                 self.advance();
                 Expr::String(string)
-            },
+            }
             TokenType::Identifer(identifier) => {
                 self.advance();
                 if self.peek() == TokenType::Symbol(Symbol::LParen) {
@@ -507,19 +523,18 @@ impl Parser {
                     self.advance();
                     let args = self.parse_args();
                     self.expect(Symbol::RParen);
-                    Expr::CallFunction(identifier, args)                   
+                    Expr::CallFunction(identifier, args)
                 } else {
                     Expr::Identifier(identifier)
                 }
-            },
+            }
             TokenType::Symbol(Symbol::LParen) => {
                 self.advance();
                 let expr = self.parse_expr();
                 self.expect(Symbol::RParen);
                 expr
-            },
-            _ => panic!("Unexpected token: {:#?}", self.tokens[self.position]) // 其他鬼魂直接报错。什么魑魅魍魉管他呢。
-
+            }
+            _ => panic!("Unexpected token: {:#?}", self.tokens[self.position]), // 其他鬼魂直接报错。什么魑魅魍魉管他呢。
         }
     }
 }
