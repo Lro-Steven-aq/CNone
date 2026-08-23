@@ -136,16 +136,28 @@ impl Parser {
         }
         loop {
             let _type = self.parse_type();
-            let identifier = self.expect_identifier();
-            params.push(Param {
-                typ: _type,
-                name: identifier,
-            });
 
-            match self.peek() {
+            if _type == Type::Void{
+                if params.is_empty() && self.peek() == TokenType::Symbol(Symbol::RParen){return params;}
+                else{panic!("'Void' must be the only parameter!");}
+            }
+            // let identifier = self.expect_identifier();
+            // params.push(Param { typ: _type, name: identifier });
+            
+            let name = match self.peek(){
+                TokenType::Identifer(identifier)=>{
+                    self.advance();
+                    Some(identifier)   //int a,
+                },
+                _=>None,       //int,int)
+            };
+
+            params.push(Param{typ:_type,name});
+
+            match self.peek() {               
                 TokenType::Symbol(Symbol::Comma) => {
                     self.advance();
-                }
+                },
                 TokenType::Symbol(Symbol::RParen) => break,
                 _ => panic!("Require ',' or ')': {:#?}", self.tokens[self.position]),
             }
