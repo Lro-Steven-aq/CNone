@@ -17,7 +17,9 @@ Lexer:                                                         词法分析
     字符串前缀没有支持。（不计划）
     浮点数、整数精度问题：也许不一样。（不考虑）
 
-# AST:
-#     Root(Program)
-#     |->FunctionDeclartion(ReturnType,ArgumentType)
-    
+AST:
+    没有函数声明/定义时类型占位的实现。
+IR:
+    todo!("更多的即将实现。。。(while, for, continue)"), （在generate_stmt(Stmt)函数里）
+    todo!("更多的即将实现。。。(UnaryOp)"),   （在generate_expr(Expr)函数里的match分支的UnaryOp手臂中）
+    _ => todo!("更多的即将实现。。。"),    （在generate_expr(Expr)函数里的match最后。）
