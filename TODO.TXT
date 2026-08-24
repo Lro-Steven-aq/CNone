@@ -23,5 +23,6 @@ IR:
     todo!("更多的即将实现。。。(while, for, continue)"), （在generate_stmt(Stmt)函数里）
     _ => todo!("更多的即将实现。。。"),    （在generate_expr(Expr)函数里的match最后。）
     TODO: CodeGenerator里面有许多的I32，I64，等等。此处原本是需要取出其原类型加以判断，但是太麻烦啰嗦，计划以后实现。
-          Neg里面浮点数应该使用fneg，整数使用ineg
+          Neg里面浮点数应该使用fneg，整数使用ineg,
+          还有uextend和sextend(有无符号)，浮点数。！！
           generate_expr里面，Expr::Member和Expr::PointerMember暂不支持。
