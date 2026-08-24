@@ -7,6 +7,6 @@
 1. 安装[Rust](https://rust-lang.org/)
 2. 然后在目录执行
    ```shell
-    cargo run--release
+    cargo run --release
    ```
    在 . 目录下，有 .test.c .test2.c 文件，其包含了一定量的C代码，其可以通过这个词法分析。

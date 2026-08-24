@@ -5,11 +5,12 @@ use cnone::ast::Parser;
 use cnone::lexer::Lexer;
 use cnone::lexer::TokenType;
 use cnone::preprocessor::Preprocessor;
+use cnone::ir::compile_program;
 fn main() {
     let args = args().collect::<Vec<String>>();
     let file = match args.get(1) {
         Some(v) => v,
-        None => "./.test.c",
+        None => "./test/test.c",
     };
     let c_code = fs::read_to_string(file).unwrap();
     let mut code = Preprocessor::new(&c_code);
@@ -29,5 +30,8 @@ fn main() {
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    println!("AST: {:#?}", ast);
+    // println!("AST: {:#?}", ast);
+    let contents = compile_program(&ast);
+    println!("Contents(Vec<u8>): \n\r{:#?}", contents)
+
 }

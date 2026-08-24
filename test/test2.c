@@ -4,6 +4,6 @@ void FF();
 /// @param  
 /// @param  
 /// @return 
-int main (int,char**) {
+int main (int i,char** a) {
     printf("...");
 }
