@@ -87,9 +87,11 @@ pub fn compile_program(program: &Program) -> Vec<u8> {
             // /////////////////////////////////////////////////////////
             for (index, param) in function.params.iter().enumerate() {
                 let typ = clif_type(&param.typ);
-                let variable = code_generator.declare_variable(&param.name.clone().unwrap(), typ);
-                let value = code_generator.builder.block_params(entry_block)[index];
-                code_generator.builder.def_var(variable, value);
+                if let Some(name) = &param.name {
+                    let variable = code_generator.declare_variable(name, typ);
+                    let value = code_generator.builder.block_params(entry_block)[index];
+                    code_generator.builder.def_var(variable, value);
+                }
             }
             if let Some(body) = &function.body {
                 code_generator.generate_stmt(&Stmt::Block(body.clone()));
