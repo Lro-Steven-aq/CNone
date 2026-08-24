@@ -9,7 +9,7 @@ fn main() {
     let args = args().collect::<Vec<String>>();
     let file = match args.get(1) {
         Some(v) => v,
-        None => "./.test.c",
+        None => "./test/test.c",
     };
     let c_code = fs::read_to_string(file).unwrap();
     let mut code = Preprocessor::new(&c_code);
