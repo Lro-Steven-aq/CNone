@@ -1,4 +1,4 @@
-int printf(char* str, char c..);
+#include <stdio.h>
 
 /// @brief 
 /// @param  

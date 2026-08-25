@@ -4,5 +4,5 @@
 target/
 Cargo.lock
 compiler-script.py
-out/
+out
 !target/doc/
