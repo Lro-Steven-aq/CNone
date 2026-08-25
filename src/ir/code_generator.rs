@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 
 use cranelift::codegen::ir::{FuncRef, StackSlot};
@@ -10,16 +9,18 @@ use crate::ast::expr::Expr;
 use crate::ast::operators::{BinaryOp, UnaryOp};
 use crate::ast::stmt::Stmt;
 
+use super::loop_info::LoopInfo;
 /// # 代码生成器。
 /// ### 不直接暴露出mod ast 外部应该使用compile_program来间接调用。
-/// 
-/// 
+///
+///
 pub struct CodeGenerator<'a, MODULE: Module> {
     pub module: &'a mut MODULE,
     pub builder: FunctionBuilder<'a>,
     pub variables: HashMap<String, StackSlot>,
     pub function_identifiers: HashMap<String, FuncId>,
     pub current_block_terminated: bool,
+    pub loop_stack: Vec<LoopInfo>,
 }
 
 impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
@@ -30,13 +31,11 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
 
     /// 分配变量内存地址。
     pub fn declare_variable(&mut self, name: &str, typ: Type) -> StackSlot {
-        let slot = self.builder.create_sized_stack_slot(
-            StackSlotData::new(
-                StackSlotKind::ExplicitSlot,
-                typ.bytes(), 
-                0
-            )
-        );
+        let slot = self.builder.create_sized_stack_slot(StackSlotData::new(
+            StackSlotKind::ExplicitSlot,
+            typ.bytes(),
+            0,
+        ));
         self.variables.insert(name.to_string(), slot);
         slot
     }
@@ -47,70 +46,7 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
         if self.current_block_terminated {
             return;
         }
-        match stmt {
-            Stmt::VaribleDecl(decl) => {
-                let typ = Self::clif_type(&decl.typ);
-                let slot = self.declare_variable(&decl.name, typ);
-                if let Some(init_value) = &decl.init {
-                    let value = self.generate_expr(init_value);
-                    self.builder.ins().stack_store(value, slot, 0);
-                }
-            }
-            Stmt::Expr(expr) => {
-                self.generate_expr(expr);
-            }
-            Stmt::Return(Some(expr)) => {
-                let value = self.generate_expr(expr);
-                self.builder.ins().return_(&[value]);
-                self.current_block_terminated = true;
-            }
-            Stmt::Return(None) => {
-                self.builder.ins().return_(&[]);
-                self.current_block_terminated = true;
-            }
-            Stmt::Block(block) => {
-                for stmt in &block.stmts {
-                    self.generate_stmt(stmt);
-                    if self.current_block_terminated {
-                        break;
-                    }
-                }
-            }
-            Stmt::If(condition, then_branch, else_branch) => {
-                let then_block = self.builder.create_block();
-                let else_block = self.builder.create_block();
-                let merge_block = self.builder.create_block();
-                let condition_value = self.generate_expr(condition);
-                self.builder
-                    .ins()
-                    .brif(condition_value, then_block, &[], else_block, &[]);
-                // then 块的代码。
-                self.builder.switch_to_block(then_block);
-                self.current_block_terminated = true;
-                self.generate_stmt(then_branch);
-                if !self.current_block_terminated {
-                    self.builder.ins().jump(merge_block, &[]);
-                }
-                self.builder.seal_block(then_block);
-
-                //  else 块的代码。
-                self.builder.switch_to_block(else_block);
-                self.current_block_terminated = false;
-                if let Some(else_stmt) = else_branch {
-                    self.generate_stmt(else_stmt);
-                }
-                if !self.current_block_terminated {
-                    self.builder.ins().jump(merge_block, &[]);
-                }
-                self.builder.seal_block(else_block);
-
-                // merge 块的代码。
-                self.builder.switch_to_block(merge_block);
-                self.current_block_terminated = true;
-                self.builder.seal_block(merge_block);
-            }
-            _ => todo!("更多的即将实现。。。(while, for, continue)"),
-        }
+        self._stmt_process(stmt);
     }
 
     pub fn is_block_filled(&self) -> bool {
@@ -119,108 +55,7 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
 
     // 2.遍历表达式。
     pub fn generate_expr(&mut self, expr: &Expr) -> Value {
-        match expr {
-            Expr::Integer(i) => self.builder.ins().iconst(types::I32, *i),
-            Expr::Float(i) => self.builder.ins().f32const(*i as f32),
-            Expr::Identifier(name) => {
-                let slot = self.variables.get(name).unwrap();
-                self.builder.ins().stack_load(types::I32, *slot, 0) // 类型后面改。
-            }
-            Expr::BinaryExp(op, left, right) => {
-                let mut left = self.generate_expr(left);
-                let mut right = self.generate_expr(right);
-
-                let left_type = self.builder.func.dfg.value_type(left);
-                let right_type = self.builder.func.dfg.value_type(right);
-                //  统一为大类型。
-                if left_type != right_type {
-                    let target_type = if left_type.bytes() > right_type.bytes() {
-                        left_type
-                    } else {
-                        right_type
-                    };
-                    if left_type != target_type {
-                        left = self.builder.ins().uextend(target_type, left);
-                    }
-                    if right_type != target_type {
-                        right = self.builder.ins().uextend(target_type, right);
-                    }
-                }
-                self.generate_binary_operator(op, left, right)
-            }
-            Expr::UnaryExp(op, obj) => self.unaryop_mapping(op, obj),
-            Expr::Assign(left, right) => {
-                let value = self.generate_expr(right);
-                match left.as_ref() {
-                    Expr::Identifier(name) => {
-                        let slot = self.variables.get(name).unwrap();
-                        self.builder.ins().stack_store(value, *slot, 0);
-                        value
-                    }
-                    _ => panic!("Invalid assignment target."),
-                }
-            }
-            Expr::CallFunction(function_anme, args) => {
-                let args: Vec<Value> = args.iter().map(|arg| self.generate_expr(arg)).collect();
-                let function_ref = self.get_function_reference(function_anme);
-                let call = self.builder.ins().call(function_ref, &args);
-                self.builder.inst_results(call)[0]
-            }
-            Expr::Index(array,index ) => {
-                let arr = self.generate_expr(array);
-                let index = self.generate_expr(index);
-                let element_size = self.builder.ins().iconst(types::I32, 4);   // 按照大小为4计算(int)
-                let offset = self.builder.ins().imul(index, element_size);
-                let addr = self.builder.ins().iadd(arr, offset);
-                self.builder.ins().load(types::I32, MemFlags::new(), addr, 0)
-            }
-            Expr::Member(_obj, _member) | Expr::PointerMember(_obj, _member) => {
-                panic!("暂不支持：没有布局信息");
-            }
-            Expr::Ternary(condition, then_expr, else_expr) => {
-                let then_block = self.builder.create_block();
-                let else_block = self.builder.create_block();
-                let merge_block = self.builder.create_block();
-                let condition_value = self.generate_expr(condition);
-                self.builder.ins().brif(condition_value,
-                     then_block, &[],
-                     else_block, &[]);
-                // then
-                self.builder.switch_to_block(then_block);
-                let then_value = self.generate_expr(then_expr);
-                self.builder.ins().jump(merge_block, &[then_value]);
-                self.builder.seal_block(then_block);
-
-                // else
-                self.builder.switch_to_block(else_block);
-                let else_value = self.generate_expr(else_expr);
-                self.builder.ins().jump(merge_block, &[else_value]);
-                self.builder.seal_block(else_block);
-
-                // merge
-                self.builder.switch_to_block(merge_block);
-                self.builder.append_block_param(merge_block, types::I32);
-                let result = self.builder.block_params(merge_block)[0];
-                self.builder.seal_block(merge_block);
-                result
-            }
-            Expr::SizeOf(typ) => {
-                let size = sizeof(typ);
-                self.builder.ins().iconst(types::I32, size as i64)
-            }
-            Expr::Char(ch) => {
-                self.builder.ins().iconst(types::I8, *ch as i64)
-            }
-            Expr::String(string) => {
-                let data_id = self.module.declare_anonymous_data(false, false).unwrap();
-                let mut data = cranelift_module::DataDescription::new();
-                data.define(string.as_bytes().to_vec().into_boxed_slice());
-                self.module.define_data(data_id, &data).unwrap();
-
-                let global = self.module.declare_data_in_func(data_id, self.builder.func);
-                self.builder.ins().global_value(types::I64, global)
-            }
-        }
+        self._expr_process(expr)
     }
 
     fn generate_binary_operator(&mut self, op: &BinaryOp, left: Value, right: Value) -> Value {
@@ -339,6 +174,279 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
             }
         }
     }
+
+    fn _stmt_process(&mut self, stmt: &Stmt) {
+        match stmt {
+            Stmt::VaribleDecl(decl) => {
+                let typ = Self::clif_type(&decl.typ);
+                let slot = self.declare_variable(&decl.name, typ);
+                if let Some(init_value) = &decl.init {
+                    let value = self.generate_expr(init_value);
+                    self.builder.ins().stack_store(value, slot, 0);
+                }
+            }
+            Stmt::Expr(expr) => {
+                self.generate_expr(expr);
+            }
+            Stmt::Return(Some(expr)) => {
+                let value = self.generate_expr(expr);
+                self.builder.ins().return_(&[value]);
+                self.current_block_terminated = true;
+            }
+            Stmt::Return(None) => {
+                self.builder.ins().return_(&[]);
+                self.current_block_terminated = true;
+            }
+            Stmt::Block(block) => {
+                for stmt in &block.stmts {
+                    self.generate_stmt(stmt);
+                    if self.current_block_terminated {
+                        break;
+                    }
+                }
+            }
+            Stmt::If(condition, then_branch, else_branch) => {
+                let then_block = self.builder.create_block();
+                let else_block = self.builder.create_block();
+                let merge_block = self.builder.create_block();
+                let condition_value = self.generate_expr(condition);
+                self.builder
+                    .ins()
+                    .brif(condition_value, then_block, &[], else_block, &[]);
+                // then 块的代码。
+                self.builder.switch_to_block(then_block);
+                self.current_block_terminated = true;
+                self.generate_stmt(then_branch);
+                if !self.current_block_terminated {
+                    self.builder.ins().jump(merge_block, &[]);
+                }
+                self.builder.seal_block(then_block);
+
+                //  else 块的代码。
+                self.builder.switch_to_block(else_block);
+                self.current_block_terminated = false;
+                if let Some(else_stmt) = else_branch {
+                    self.generate_stmt(else_stmt);
+                }
+                if !self.current_block_terminated {
+                    self.builder.ins().jump(merge_block, &[]);
+                }
+                self.builder.seal_block(else_block);
+
+                // merge 块的代码。
+                self.builder.switch_to_block(merge_block);
+                self.current_block_terminated = true;
+                self.builder.seal_block(merge_block);
+            }
+            Stmt::While(condition, body) => {
+                let header_block = self.builder.create_block();
+                let body_block = self.builder.create_block();
+                let exit_block = self.builder.create_block();
+                // 条件检查
+                self.builder.ins().jump(header_block, &[]);
+                self.current_block_terminated = true;
+
+                // 条件
+                self.builder.switch_to_block(header_block);
+                let condition_value = self.generate_expr(condition);
+                self.builder
+                    .ins()
+                    .brif(condition_value, body_block, &[], exit_block, &[]);
+                self.builder.seal_block(header_block);
+
+                // 循环体
+                self.builder.switch_to_block(body_block);
+                self.current_block_terminated = false;
+                self.loop_stack.push(LoopInfo {
+                    exit_block,
+                    continue_block: header_block,
+                });
+                self.generate_stmt(body);
+                self.loop_stack.pop();
+                if !self.current_block_terminated {
+                    self.builder.ins().jump(header_block, &[]);
+                }
+                self.builder.seal_block(body_block);
+
+                // 退出。。。
+                self.builder.switch_to_block(exit_block);
+                self.builder.seal_block(exit_block);
+                self.current_block_terminated = false;
+            }
+            Stmt::For(_init, condtion, step, body) => {
+                let header_block = self.builder.create_block();
+                let body_block = self.builder.create_block();
+                let step_block = self.builder.create_block();
+                let exit_block = self.builder.create_block();
+
+                /* WARNING: 此处的支持并不是Stmt类型，所以并不支持赋值。 */
+                if let Some(i) = _init {
+                    self.generate_expr(i);
+                }
+
+                self.builder.ins().jump(header_block, &[]);
+                self.current_block_terminated = true;
+
+                self.builder.switch_to_block(header_block);
+                if let Some(condition) = condtion {
+                    let condition_value = self.generate_expr(condition);
+                    self.builder
+                        .ins()
+                        .brif(condition_value, body_block, &[], exit_block, &[]);
+                } else {
+                    /*
+                       for(init;  ;step) {
+                           没有退出条件，所以是死循环。
+                       }
+                    */
+                    self.builder.ins().jump(body_block, &[]);
+                }
+                self.builder.seal_block(header_block);
+
+                self.builder.switch_to_block(body_block);
+                self.current_block_terminated = false;
+                self.loop_stack.push(LoopInfo {
+                    exit_block,
+                    continue_block: exit_block,
+                });
+                self.generate_stmt(body);
+                self.loop_stack.pop();
+                self.builder.seal_block(body_block);
+
+                self.builder.switch_to_block(step_block);
+                if let Some(step) = step {
+                    self.generate_expr(step);
+                }
+                self.builder.ins().jump(header_block, &[]);
+                self.builder.seal_block(step_block);
+
+                self.builder.switch_to_block(exit_block);
+                self.builder.seal_block(exit_block);
+                self.current_block_terminated = false;
+            }
+            Stmt::Break => {
+                if let Some(loop_info) = self.loop_stack.last() {
+                    self.builder.ins().jump(loop_info.exit_block, &[]);
+                    self.current_block_terminated = true;
+                } else {
+                    panic!("Break outside of the loop");
+                }
+            }
+            Stmt::Continue => {
+                if let Some(loop_info) = self.loop_stack.last() {
+                    self.builder.ins().jump(loop_info.continue_block, &[]);
+                    self.current_block_terminated = true;
+                } else {
+                    panic!("Continue outside of the loop")
+                }
+            }
+        }
+    }
+
+    fn _expr_process(&mut self, expr: &Expr) -> Value {
+        match expr {
+            Expr::Integer(i) => self.builder.ins().iconst(types::I32, *i),
+            Expr::Float(i) => self.builder.ins().f32const(*i as f32),
+            Expr::Identifier(name) => {
+                let slot = self.variables.get(name).unwrap();
+                self.builder.ins().stack_load(types::I32, *slot, 0) // 类型后面改。
+            }
+            Expr::BinaryExp(op, left, right) => {
+                let mut left = self.generate_expr(left);
+                let mut right = self.generate_expr(right);
+
+                let left_type = self.builder.func.dfg.value_type(left);
+                let right_type = self.builder.func.dfg.value_type(right);
+                //  统一为大类型。
+                if left_type != right_type {
+                    let target_type = if left_type.bytes() > right_type.bytes() {
+                        left_type
+                    } else {
+                        right_type
+                    };
+                    if left_type != target_type {
+                        left = self.builder.ins().sextend(target_type, left);
+                    }
+                    if right_type != target_type {
+                        right = self.builder.ins().sextend(target_type, right);
+                    }
+                }
+                self.generate_binary_operator(op, left, right)
+            }
+            Expr::UnaryExp(op, obj) => self.unaryop_mapping(op, obj),
+            Expr::Assign(left, right) => {
+                let value = self.generate_expr(right);
+                match left.as_ref() {
+                    Expr::Identifier(name) => {
+                        let slot = self.variables.get(name).unwrap();
+                        self.builder.ins().stack_store(value, *slot, 0);
+                        value
+                    }
+                    _ => panic!("Invalid assignment target."),
+                }
+            }
+            Expr::CallFunction(function_anme, args) => {
+                let args: Vec<Value> = args.iter().map(|arg| self.generate_expr(arg)).collect();
+                let function_ref = self.get_function_reference(function_anme);
+                let call = self.builder.ins().call(function_ref, &args);
+                self.builder.inst_results(call)[0]
+            }
+            Expr::Index(array, index) => {
+                let arr = self.generate_expr(array);
+                let index = self.generate_expr(index);
+                let element_size = self.builder.ins().iconst(types::I32, 4); // 按照大小为4计算(int)
+                let offset = self.builder.ins().imul(index, element_size);
+                let addr = self.builder.ins().iadd(arr, offset);
+                self.builder
+                    .ins()
+                    .load(types::I32, MemFlags::new(), addr, 0)
+            }
+            Expr::Member(_obj, _member) | Expr::PointerMember(_obj, _member) => {
+                panic!("暂不支持：没有布局信息");
+            }
+            Expr::Ternary(condition, then_expr, else_expr) => {
+                let then_block = self.builder.create_block();
+                let else_block = self.builder.create_block();
+                let merge_block = self.builder.create_block();
+                let condition_value = self.generate_expr(condition);
+                self.builder
+                    .ins()
+                    .brif(condition_value, then_block, &[], else_block, &[]);
+                // then
+                self.builder.switch_to_block(then_block);
+                let then_value = self.generate_expr(then_expr);
+                self.builder.ins().jump(merge_block, &[then_value]);
+                self.builder.seal_block(then_block);
+
+                // else
+                self.builder.switch_to_block(else_block);
+                let else_value = self.generate_expr(else_expr);
+                self.builder.ins().jump(merge_block, &[else_value]);
+                self.builder.seal_block(else_block);
+
+                // merge
+                self.builder.switch_to_block(merge_block);
+                self.builder.append_block_param(merge_block, types::I32);
+                let result = self.builder.block_params(merge_block)[0];
+                self.builder.seal_block(merge_block);
+                result
+            }
+            Expr::SizeOf(typ) => {
+                let size = sizeof(typ);
+                self.builder.ins().iconst(types::I32, size as i64)
+            }
+            Expr::Char(ch) => self.builder.ins().iconst(types::I8, *ch as i64),
+            Expr::String(string) => {
+                let data_id = self.module.declare_anonymous_data(false, false).unwrap();
+                let mut data = cranelift_module::DataDescription::new();
+                data.define(string.as_bytes().to_vec().into_boxed_slice());
+                self.module.define_data(data_id, &data).unwrap();
+
+                let global = self.module.declare_data_in_func(data_id, self.builder.func);
+                self.builder.ins().global_value(types::I64, global)
+            }
+        }
+    }
 }
 
 /// ## 从cnone::ast::Type和cnone::lexer::types::Type 映射到cranelift::prelude::Type
@@ -355,7 +463,7 @@ pub fn clif_type(typ: &ast::Type) -> Type {
 
 ///
 /// # 返回类型的字节。
-/// # ReturnType usize
+/// # Return usize
 fn sizeof(typ: &ast::Type) -> usize {
     match typ {
         ast::Type::Char => 1,
@@ -367,9 +475,9 @@ fn sizeof(typ: &ast::Type) -> usize {
     }
 }
 /// ## 应该返回当前变量在cranelift::types里对应的Type。
-/// 
-/// 
-/// # ReturnType cranelift::types::Type
+///
+///
+/// # Return cranelift::types::Type
 #[allow(unused)]
 fn get_type_of() -> types::Type {
     return types::I64;

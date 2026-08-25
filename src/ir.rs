@@ -1,4 +1,5 @@
 mod code_generator;
+mod loop_info;
 
 use std::collections::HashMap;
 
@@ -18,10 +19,11 @@ use crate::ast::stmt::Stmt;
 use code_generator::CodeGenerator;
 use code_generator::clif_type;
 
-/// # 用来编译程序
+/// ## 用来编译程序到目标文件。
+/// ### 缺失链接。
 /// # Input cnone::ast::program::Program
 /// # Return Vec<u8>
-pub fn compile_program(program: &Program) -> Vec<u8> {
+pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
     let triple = triple!("x86_64-unknown-linux-gnu");
     let flag_builder = settings::builder();
 
@@ -84,6 +86,7 @@ pub fn compile_program(program: &Program) -> Vec<u8> {
                 variables: HashMap::new(),
                 function_identifiers: function_identifiers.clone(),
                 current_block_terminated: false,
+                loop_stack: Vec::new(),
             };
             // /////////////////////////////////////////////////////////
             // ///////              参数绑定与variables。          ///////
@@ -98,7 +101,7 @@ pub fn compile_program(program: &Program) -> Vec<u8> {
                     if value_type.bytes() > typ.bytes() {
                         value = code_generator.builder.ins().ireduce(typ, value); // 缩减
                     } else {
-                        value = code_generator.builder.ins().uextend(typ, value); // 扩大
+                        value = code_generator.builder.ins().sextend(typ, value); // 扩大
                     }
                 }
                 code_generator.builder.ins().stack_store(value, slot, 0);

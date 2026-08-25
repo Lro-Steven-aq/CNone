@@ -1,4 +1,4 @@
-void FF();
+int printf(char* str, char c..);
 
 /// @brief 
 /// @param  

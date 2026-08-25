@@ -11,7 +11,11 @@ pub enum Stmt {
     //条件，   为真时执行的代码块， 为假时执行的代码块。
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     While(Expr, Box<Stmt>),
-    For(Option<Expr>, Option<Expr>, Option<Expr>),
+    // for(Option;Option;Option) {
+    //    Option
+    // }
+    For(Option<Expr>, Option<Expr>, Option<Expr>, Box<Stmt>),
     Block(Block),
     Continue,
+    Break,
 }

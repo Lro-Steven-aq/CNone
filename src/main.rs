@@ -2,10 +2,10 @@ use std::env::args;
 use std::fs;
 
 use cnone::ast::Parser;
+use cnone::compiler::compile;
 use cnone::lexer::Lexer;
 use cnone::lexer::TokenType;
 use cnone::preprocessor::Preprocessor;
-use cnone::ir::compile_program;
 fn main() {
     let args = args().collect::<Vec<String>>();
     let file = match args.get(1) {
@@ -21,8 +21,6 @@ fn main() {
         let token = lexer.get_next_token();
         tokens.push(token.clone());
 
-        // println!("{:?}",token);
-
         if token.get_token_type() == TokenType::EOF {
             break;
         }
@@ -30,8 +28,5 @@ fn main() {
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    // println!("AST: {:#?}", ast);
-    let contents = compile_program(&ast);
-    println!("Contents(Vec<u8>): \n\r{:#?}", contents)
-
+    compile(&ast, "./out", true);
 }
