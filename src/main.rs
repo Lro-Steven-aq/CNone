@@ -2,6 +2,7 @@ use std::env::args;
 use std::fs;
 
 use cnone::ast::Parser;
+use cnone::compiler::compile;
 use cnone::lexer::Lexer;
 use cnone::lexer::TokenType;
 use cnone::preprocessor::Preprocessor;
@@ -20,8 +21,6 @@ fn main() {
         let token = lexer.get_next_token();
         tokens.push(token.clone());
 
-        // println!("{:?}",token);
-
         if token.get_token_type() == TokenType::EOF {
             break;
         }
@@ -29,5 +28,5 @@ fn main() {
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    println!("AST: {:#?}", ast);
+    compile(&ast, "./out", true);
 }

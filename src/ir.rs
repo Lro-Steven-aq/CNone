@@ -1,4 +1,5 @@
-pub mod code_generator;
+mod code_generator;
+mod loop_info;
 
 use std::collections::HashMap;
 
@@ -18,7 +19,11 @@ use crate::ast::stmt::Stmt;
 use code_generator::CodeGenerator;
 use code_generator::clif_type;
 
-pub fn compile_program(program: &Program) -> Vec<u8> {
+/// ## 用来编译程序到目标文件。
+/// ### 缺失链接。
+/// # Input cnone::ast::program::Program
+/// # Return Vec<u8>
+pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
     let triple = triple!("x86_64-unknown-linux-gnu");
     let flag_builder = settings::builder();
 
@@ -81,6 +86,7 @@ pub fn compile_program(program: &Program) -> Vec<u8> {
                 variables: HashMap::new(),
                 function_identifiers: function_identifiers.clone(),
                 current_block_terminated: false,
+                loop_stack: Vec::new(),
             };
             // /////////////////////////////////////////////////////////
             // ///////              参数绑定与variables。          ///////
@@ -88,9 +94,18 @@ pub fn compile_program(program: &Program) -> Vec<u8> {
             for (index, param) in function.params.iter().enumerate() {
                 let typ = clif_type(&param.typ);
                 if let Some(name) = &param.name {
-                    let variable = code_generator.declare_variable(name, typ);
-                    let value = code_generator.builder.block_params(entry_block)[index];
-                    code_generator.builder.def_var(variable, value);
+                    let slot = code_generator.declare_variable(name, typ);
+                    let mut value = code_generator.builder.block_params(entry_block)[index];
+                    // ///
+                    let value_type = code_generator.builder.func.dfg.value_type(value);
+                    if value_type != typ {
+                        if value_type.bytes() > typ.bytes() {
+                            value = code_generator.builder.ins().ireduce(typ, value); // 缩减
+                        } else {
+                            value = code_generator.builder.ins().sextend(typ, value); // 扩大
+                        }
+                    }
+                    code_generator.builder.ins().stack_store(value, slot, 0);
                 }
             }
             if let Some(body) = &function.body {
