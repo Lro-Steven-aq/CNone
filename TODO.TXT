@@ -26,3 +26,5 @@ IR:
           Neg里面浮点数应该使用fneg，整数使用ineg,
           还有浮点数。！！
           generate_expr里面，Expr::Member和Expr::PointerMember暂不支持。
+Linker:
+    考虑MSVC工具链。（计划）

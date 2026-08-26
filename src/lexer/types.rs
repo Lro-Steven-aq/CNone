@@ -25,5 +25,7 @@ pub enum Type {
     Signed,
     Void,
 
+    Struct(String),
+
     Pointer(Box<Type>), //  不是词法分析应该解析的类型，放在语法分析时处理。
 }

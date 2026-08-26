@@ -1,5 +1,6 @@
 mod code_generator;
 mod loop_info;
+mod struct_info;
 
 use std::collections::HashMap;
 
@@ -84,9 +85,11 @@ pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
                 module: &mut module,
                 builder: builder,
                 variables: HashMap::new(),
+                variable_types: HashMap::new(),
                 function_identifiers: function_identifiers.clone(),
                 current_block_terminated: false,
                 loop_stack: Vec::new(),
+                structs: HashMap::new(),
             };
             // /////////////////////////////////////////////////////////
             // ///////              参数绑定与variables。          ///////

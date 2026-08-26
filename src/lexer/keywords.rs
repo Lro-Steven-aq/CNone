@@ -13,4 +13,7 @@ pub enum Keyword {
     Default,
     Goto, // Warning!
     Sizeof,
+
+    Struct,
+    Typedef
 }

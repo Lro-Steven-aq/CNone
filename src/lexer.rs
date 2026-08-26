@@ -127,6 +127,8 @@ impl Lexer {
             "default" => TokenType::Keyword(Keyword::Default),
             "goto" => TokenType::Keyword(Keyword::Goto),
             "sizeof" => TokenType::Keyword(Keyword::Sizeof),
+            "struct" => TokenType::Keyword(Keyword::Struct),
+            "typedef" => TokenType::Keyword(Keyword::Typedef),
             //如果什么都不是，那么将被认定为合法标识符。
             _ => TokenType::Identifer(word),
         }

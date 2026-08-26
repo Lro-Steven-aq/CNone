@@ -5,11 +5,13 @@ use cranelift::prelude::*;
 use cranelift_module::{FuncId, Module};
 
 use crate::ast;
-use crate::ast::expr::Expr;
-use crate::ast::operators::{BinaryOp, UnaryOp};
-use crate::ast::stmt::Stmt;
+use ast::expr::Expr;
+use ast::operators::{BinaryOp, UnaryOp};
+use ast::stmt::Stmt;
+use ast::declarations::StructDecl;
 
 use super::loop_info::LoopInfo;
+use super::struct_info::StructInfo;
 /// # 代码生成器。
 /// ### 不直接暴露出mod ast 外部应该使用compile_program来间接调用。
 ///
@@ -18,9 +20,11 @@ pub struct CodeGenerator<'a, MODULE: Module> {
     pub module: &'a mut MODULE,
     pub builder: FunctionBuilder<'a>,
     pub variables: HashMap<String, StackSlot>,
+    pub variable_types: HashMap<String, ast::Type>,
     pub function_identifiers: HashMap<String, FuncId>,
     pub current_block_terminated: bool,
     pub loop_stack: Vec<LoopInfo>,
+    pub structs: HashMap<String, StructInfo>,
 }
 
 impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
@@ -30,13 +34,27 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
     }
 
     /// 分配变量内存地址。
-    pub fn declare_variable(&mut self, name: &str, typ: Type) -> StackSlot {
-        let slot = self.builder.create_sized_stack_slot(StackSlotData::new(
-            StackSlotKind::ExplicitSlot,
-            typ.bytes(),
-            0,
-        ));
+    pub fn declare_variable(&mut self, name: &str, typ: &ast::Type) -> StackSlot {
+        let slot = match typ {
+            ast::Type::Struct(struct_name) => {
+                let info = self.structs.get(struct_name).unwrap();
+                self.builder.create_sized_stack_slot(StackSlotData { 
+                    kind: StackSlotKind::ExplicitSlot, 
+                    size: info.size, 
+                    align_shift: info.align as u8,
+                 })
+            }
+            _ => {
+                let _type = Self::clif_type(typ);
+                self.builder.create_sized_stack_slot(StackSlotData { 
+                    kind: StackSlotKind::ExplicitSlot, 
+                    size: _type.bytes(), 
+                    align_shift: _type.bytes() as u8,
+                })
+            }
+        };
         self.variables.insert(name.to_string(), slot);
+        self.variable_types.insert(name.to_string(), typ.clone());
         slot
     }
 
@@ -432,7 +450,7 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
                 result
             }
             Expr::SizeOf(typ) => {
-                let size = sizeof(typ);
+                let size = self.sizeof(typ);
                 self.builder.ins().iconst(types::I32, size as i64)
             }
             Expr::Char(ch) => self.builder.ins().iconst(types::I8, *ch as i64),
@@ -447,6 +465,63 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
             }
         }
     }
+
+    /// 计算布局。
+    fn type_size_align(&self, typ: &ast::Type) -> (u32, u32) {
+        match typ {
+            ast::Type::Char => (1, 1),
+            ast::Type::Short => (2, 2),
+            ast::Type::Int | ast::Type::Float => (4, 4),
+            ast::Type::Long | ast::Type::Double | ast::Type::Pointer(_) => (8, 8),
+            ast::Type::Struct(name) => {
+                let info = self.structs.get(name).unwrap();
+                (info.size, info.align)
+            }
+            ast::Type::Signed | ast::Type::Unsigned | ast::Type::Void => (4, 4),
+        }
+    }
+
+    fn calcuate_struct_layout(&self, decl: &StructDecl) -> StructInfo {
+        let mut fields = HashMap::new();
+        let mut offset: u32 = 0;
+        let mut max_align: u32 = 1;
+
+        for field in &decl.fields {
+            let (size, align) = self.type_size_align(&field.typ);
+            offset = ((offset + align - 1) / align) * align;
+            fields.insert(field.name.clone(), (field.typ.clone(), offset));
+            offset += size;
+            if align > max_align {
+                max_align = align;
+            }
+        }
+        let size = ((offset + max_align - 1) / max_align) * max_align;
+        StructInfo { size: size, align: max_align, fields: fields }
+    }
+///
+/// # 返回类型的字节。
+/// # Return usize
+    fn sizeof(&self, typ: &ast::Type) -> usize {
+        match typ {
+            ast::Type::Char => 1,
+            ast::Type::Short => 2,
+            ast::Type::Int | ast::Type::Float => 4,
+            ast::Type::Long | ast::Type::Double => 8,
+            ast::Type::Pointer(_) => 8,
+            ast::Type::Signed | ast::Type::Unsigned | ast::Type::Void => 4,
+            ast::Type::Struct(name) => {
+                self.structs.get(name).unwrap().size as usize
+            }
+        }
+    }
+
+}
+
+/// ## 应该返回当前变量在cranelift::types里对应的Type。
+/// # Return cranelift::types::Type
+#[allow(unused)]
+fn get_type_of() -> types::Type {
+    return types::I64;
 }
 
 /// ## 从cnone::ast::Type和cnone::lexer::types::Type 映射到cranelift::prelude::Type
@@ -459,26 +534,4 @@ pub fn clif_type(typ: &ast::Type) -> Type {
         ast::Type::Void => types::INVALID,
         _ => types::I32,
     }
-}
-
-///
-/// # 返回类型的字节。
-/// # Return usize
-fn sizeof(typ: &ast::Type) -> usize {
-    match typ {
-        ast::Type::Char => 1,
-        ast::Type::Short => 2,
-        ast::Type::Int | ast::Type::Float => 4,
-        ast::Type::Long | ast::Type::Double => 8,
-        ast::Type::Pointer(_) => 8,
-        ast::Type::Signed | ast::Type::Unsigned | ast::Type::Void => 4,
-    }
-}
-/// ## 应该返回当前变量在cranelift::types里对应的Type。
-///
-///
-/// # Return cranelift::types::Type
-#[allow(unused)]
-fn get_type_of() -> types::Type {
-    return types::I64;
 }

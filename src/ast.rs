@@ -1,10 +1,13 @@
-pub mod block;
 pub mod declarations;
 pub mod expr;
 pub mod operators;
-pub mod param;
 pub mod program;
 pub mod stmt;
+mod param;
+mod block;
+mod field;
+
+use std::collections::HashMap;
 
 use crate::lexer::TokenType;
 use crate::lexer::keywords::Keyword;
@@ -15,6 +18,9 @@ use block::Block;
 use declarations::Decl;
 use declarations::FunctionDecl;
 use declarations::VaribleDecl;
+use declarations::StructDecl;
+use declarations::TypeDefDecl;
+use field::Field;
 use expr::Expr;
 use operators::BinaryOp;
 use operators::UnaryOp;
@@ -31,6 +37,7 @@ use super::lexer::Token;
 pub struct Parser {
     tokens: Vec<Token>,
     position: usize,
+    typedefs: HashMap<String,Type>,
 }
 
 impl Parser {
@@ -38,6 +45,7 @@ impl Parser {
         Self {
             tokens: tokens,
             position: 0,
+            typedefs: HashMap::new(),
         }
     }
 
@@ -51,6 +59,16 @@ impl Parser {
     }
 
     fn parse_decl(&mut self) -> Decl {
+        match self.peek() {
+            TokenType::Keyword(Keyword::Struct) => self.parse_struct(),
+            TokenType::Keyword(Keyword::Typedef) => self.parse_typedef(),
+            _ => self.parse_functions_or_variables(),
+        }
+    }
+
+    /// 为了解决parse_decl函数的复杂性，我们将建立此函数。
+    /// 此函数只解析函数或者是变量。
+    fn parse_functions_or_variables(&mut self) -> Decl {
         let _type = self.parse_type();
         let name = self.expect_identifier();
 
@@ -94,13 +112,75 @@ impl Parser {
         }
     }
 
+    /// 解析结构体。
+    fn parse_struct(&mut self) -> Decl {
+        /*
+            struct STRUCT_NAME {
+                类型1 字段a;
+                类型2 字段b;
+                ...   ...;
+            };
+             ^ 注意分号。
+            struct STRUCT_NAME obj;
+         */
+        self.expect_keyword(Keyword::Struct);
+        let name = self.expect_identifier();
+        self.expect(Symbol::LBrace);
+
+        let mut fields = Vec::new();
+        while self.peek() != TokenType::Symbol(Symbol::RBrace) {
+            let typ = self.parse_type();
+            let field_name = self.expect_identifier();
+            fields.push(Field {
+                name: field_name,
+                typ: typ,
+            });
+            self.expect(Symbol::Semicolon);
+        }
+        self.advance();                          // }
+        self.expect(Symbol::Semicolon); // ;
+        Decl::Struct(StructDecl {
+            name: name,
+            fields: fields,
+        })
+
+
+    }
+
+    /// 解析typedef
+    fn parse_typedef(&mut self) -> Decl {
+        self.expect_keyword(Keyword::Typedef);
+        let typ = self.parse_type();
+        let alias =  self.expect_identifier();
+        self.expect(Symbol::Semicolon);
+        self.typedefs.insert(alias.clone(), typ.clone());
+        Decl::TypeDef(TypeDefDecl {
+            typ: typ,
+            alias: alias,
+        })
+
+    }
+
     /// 解析类型。
-    /// int char void char* int*
+    /// int char void char* int* struct STRUCT_NAME FILE*
     fn parse_type(&mut self) -> Type {
         let mut base_type = match self.peek() {
             TokenType::Type(t) => {
                 self.advance();
                 t
+            }
+            TokenType::Keyword(Keyword::Struct) => {
+                self.advance();
+                let name = self.expect_identifier();
+                Type::Struct(name)
+            }
+            TokenType::Identifer(identifier) => {
+                if let Some(typ) = self.typedefs.get(&identifier).cloned() {
+                    self.advance();
+                    typ
+                } else {
+                    panic!("Expected type, got \"{}\"",identifier);
+                }
             }
             _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
         };
@@ -174,13 +254,13 @@ impl Parser {
     }
     /// 解析一个代码块。
     /**
-     * ```c
+     * ``c
      * {
      *   int a;
      *   float b;
      *  char ch = 'M';
      *    }
-     * ```
+     * ``
      */
     fn parse_block(&mut self) -> Block {
         self.expect(Symbol::LBrace);
@@ -266,6 +346,7 @@ impl Parser {
         self.peek() == TokenType::EOF
     }
 
+    /// 对于符号进行断言。
     fn expect(&mut self, expected: Symbol) {
         if self.peek() == TokenType::Symbol(expected.clone()) {
             self.advance();
@@ -277,6 +358,8 @@ impl Parser {
         }
     }
 
+    /// 对于标识符进行断言并返回标识符。
+    /// ## Return String
     fn expect_identifier(&mut self) -> String {
         match self.peek() {
             TokenType::Identifer(identifier) => {
@@ -286,6 +369,17 @@ impl Parser {
             _ => panic!("Expected identifier {:#?}", self.tokens[self.position]),
         }
     }
+
+    /// 对于关键字进行断言。
+    fn expect_keyword(&mut self, keyword: Keyword) {
+        match self.peek() {
+            TokenType::Keyword(kw) if keyword == kw => self.advance(),
+            _ => {
+                panic!("Expected keyword \"{:#?}\"", keyword);
+            }
+        }
+    }
+
 }
 
 impl Parser {
