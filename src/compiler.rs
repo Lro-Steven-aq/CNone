@@ -16,6 +16,10 @@ pub fn compile(program: &Program, output_path: &str, remove_object_file: bool) {
     let object_file_output_path = format!("{}.o",output_path);
     fs::write(&object_file_output_path, bytecode).expect("Cannot open the path.");
     let status = if cfg!(target_os = "windows") {
+        /*
+          Windows 环境应该也支持MSVC (cl.exe 和 link.exe)
+          毕竟，Windows 全名是 Microsoft Windows (MSWindows)
+          */
         Command::new("gcc")
             .arg(&object_file_output_path)
             .arg("-o")
