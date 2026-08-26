@@ -24,7 +24,13 @@ use code_generator::clif_type;
 /// # Input cnone::ast::program::Program
 /// # Return Vec<u8>
 pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
-    let triple = triple!("x86_64-unknown-linux-gnu");
+    let triple = if cfg!(target_os = "windows") {
+        triple!("x86_64-pc-windows-gnu")
+    } else if cfg!(target_os = "linux") {
+        triple!("x86_64-unknown-linux-gnu")
+    } else {
+        panic!("Sorry, only Windows and Linux are supported for now.");
+    };
     let flag_builder = settings::builder();
 
     let isa_builder = isa::lookup(triple).unwrap();
