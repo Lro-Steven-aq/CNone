@@ -1,7 +1,7 @@
-use crate::ast::Type;
+use crate::lexer::types::Type;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug,Clone,PartialEq)]
 pub struct Param {
     pub typ: Type,
-    pub name: String,
+    pub name: Option<String>,
 }

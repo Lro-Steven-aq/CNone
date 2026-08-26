@@ -24,7 +24,13 @@ use code_generator::clif_type;
 /// # Input cnone::ast::program::Program
 /// # Return Vec<u8>
 pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
-    let triple = triple!("x86_64-unknown-linux-gnu");
+    let triple = if cfg!(target_os = "windows") {
+        triple!("x86_64-pc-windows-gnu")
+    } else if cfg!(target_os = "linux") {
+        triple!("x86_64-unknown-linux-gnu")
+    } else {
+        panic!("Sorry, only Windows and Linux are supported for now.");
+    };
     let flag_builder = settings::builder();
 
     let isa_builder = isa::lookup(triple).unwrap();
@@ -93,18 +99,20 @@ pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
             // /////////////////////////////////////////////////////////
             for (index, param) in function.params.iter().enumerate() {
                 let typ = clif_type(&param.typ);
-                let slot = code_generator.declare_variable(&param.name, typ);
-                let mut value = code_generator.builder.block_params(entry_block)[index];
-                // ///
-                let value_type = code_generator.builder.func.dfg.value_type(value);
-                if value_type != typ {
-                    if value_type.bytes() > typ.bytes() {
-                        value = code_generator.builder.ins().ireduce(typ, value); // 缩减
-                    } else {
-                        value = code_generator.builder.ins().sextend(typ, value); // 扩大
+                if let Some(name) = &param.name {
+                    let slot = code_generator.declare_variable(name, typ);
+                    let mut value = code_generator.builder.block_params(entry_block)[index];
+                    // ///
+                    let value_type = code_generator.builder.func.dfg.value_type(value);
+                    if value_type != typ {
+                        if value_type.bytes() > typ.bytes() {
+                            value = code_generator.builder.ins().ireduce(typ, value); // 缩减
+                        } else {
+                            value = code_generator.builder.ins().sextend(typ, value); // 扩大
+                        }
                     }
+                    code_generator.builder.ins().stack_store(value, slot, 0);
                 }
-                code_generator.builder.ins().stack_store(value, slot, 0);
             }
             if let Some(body) = &function.body {
                 code_generator.generate_stmt(&Stmt::Block(body.clone()));

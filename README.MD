@@ -5,7 +5,8 @@
 
 ### 如何运行
 1. 安装[Rust](https://rust-lang.org/)
-2. 然后在目录执行
+2. 在 **Windows** 上编译链接还需要 MSYS2，并保证 `gcc` 在 PATH 中（Linux 使用系统自带的 `cc`，无需额外安装）
+3. 然后在目录执行
    ```shell
     cargo run --release
    ```

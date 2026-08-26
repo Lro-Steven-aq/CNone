@@ -5,4 +5,6 @@ target/
 Cargo.lock
 compiler-script.py
 out
+out.exe
+out.o
 !target/doc/
