@@ -1,4 +1,4 @@
-mod block;
+pub mod block;
 pub mod declarations;
 pub mod expr;
 mod field;
@@ -17,11 +17,11 @@ use crate::lexer::symbols::Symbol;
 use block::Block;
 use declarations::Decl;
 use declarations::FunctionDecl;
-use declarations::StructDecl;
-use declarations::TypeDefDecl;
+// use declarations::StructDecl;
+// use declarations::TypeDefDecl;
 use declarations::VaribleDecl;
 use expr::Expr;
-use field::Field;
+// use field::Field;
 use operators::BinaryOp;
 use operators::UnaryOp;
 use param::Param;
@@ -127,22 +127,24 @@ impl Parser {
         let name = self.expect_identifier();
         self.expect(Symbol::LBrace);
 
-        let mut fields = Vec::new();
+        // let mut fields = Vec::new();
         while self.peek() != TokenType::Symbol(Symbol::RBrace) {
             let typ = self.parse_type();
             let field_name = self.expect_identifier();
-            fields.push(Field {
-                name: field_name,
-                typ: typ,
-            });
-            self.expect(Symbol::Semicolon);
+            // fields.push(Field {
+            //     name: field_name,
+            //     typ: typ,
+            // });
+            panic!("Unsupport Struct .");
+            // self.expect(Symbol::Semicolon);
         }
         self.advance(); // }
         self.expect(Symbol::Semicolon); // ;
-        Decl::Struct(StructDecl {
-            name: name,
-            fields: fields,
-        })
+        // Decl::Struct(StructDecl {
+        //     name: name,
+        //     fields: fields,
+        // })
+        panic!("Unsupport Struct.")
     }
 
     /// 解析typedef
@@ -152,10 +154,11 @@ impl Parser {
         let alias = self.expect_identifier();
         self.expect(Symbol::Semicolon);
         self.typedefs.insert(alias.clone(), typ.clone());
-        Decl::TypeDef(TypeDefDecl {
-            typ: typ,
-            alias: alias,
-        })
+        // Decl::TypeDef(TypeDefDecl {
+        //     typ: typ,
+        //     alias: alias,
+        // })
+        panic!("Unsupport Typedef .");
     }
 
     /// 解析类型。

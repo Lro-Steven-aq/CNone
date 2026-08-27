@@ -1,0 +1,26 @@
+# 注释
+MAIN:
+PUSH INT 8                                      [8]
+PUSH UINT 2                                     [8,2]
+ADD                                             [10] # 消耗 最后两个，推入一个。
+PUSH CHAR 'a'                                   [10,'a'] ('a' in ascii is 9)
+CALL func1 0 1
+
+
+
+
+
+
+func1:                                          [10,'a']
+CALL ECHO                                       [10] # ECHO 是内置函数，输出且消耗栈的最后一个，没有推入。
+CALL COPY                                       [10,10] # COPY 是内置函数，消耗栈的最后一个，推入两个一样的。
+SET 1 2                                         [10,2]
+CALL func2 0
+
+func2:                                          [10]
+INCREASE                                        [11]
+PUSH UINT 0                                     [11,0]
+GT                                              消耗两个，比较大小，如果前一个（指索引小的）大与后一个（指索引大的）推入 UINT 1
+JUMP func2 0                                    跳转（不是函数调用）消耗一个栈的值如果 不为零，调用函数。
+CLEAR                                           此栈归空。
+

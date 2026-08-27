@@ -2,7 +2,6 @@ use std::env::args;
 use std::fs;
 
 use cnone::ast::Parser;
-use cnone::compiler::compile;
 use cnone::lexer::Lexer;
 use cnone::lexer::TokenType;
 use cnone::preprocessor::Preprocessor;
@@ -28,5 +27,5 @@ fn main() {
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    compile(&ast, "./out", true);
+    println!("Program: {:#?}", ast);
 }

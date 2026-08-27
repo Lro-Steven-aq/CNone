@@ -1,6 +1,6 @@
 use super::block::Block;
 use super::expr::Expr;
-use super::field::Field;
+// use super::field::Field;
 use super::param::Param;
 use crate::ast::Type;
 
@@ -9,8 +9,8 @@ pub enum Decl {
     // 总声明，包括了函数和变量。
     Function(FunctionDecl),
     Varible(VaribleDecl),
-    Struct(StructDecl),
-    TypeDef(TypeDefDecl),
+    // Struct(StructDecl),
+    // TypeDef(TypeDefDecl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,14 +28,30 @@ pub struct VaribleDecl {
     pub init: Option<Expr>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct StructDecl {
-    pub name: String,
-    pub fields: Vec<Field>,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct StructDecl {
+//     pub name: String,
+//     pub fields: Vec<Field>,
+// }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeDefDecl {
-    pub typ: Type,
-    pub alias: String,
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct TypeDefDecl {
+//     pub typ: Type,
+//     pub alias: String,
+// }
+
+
+
+
+
+impl ToString for VaribleDecl {
+    fn to_string(&self) -> String {
+        match self.init.clone().unwrap() {
+            Expr::Integer(i) => return format!("PUSH {:?}", i),
+            Expr::Char(c) => return format!("PUSH {:?}", c),
+            Expr::Float(f) => return format!("PUSH {:?}", f),
+            _ => panic!("Unsupported Data Type."),
+        }
+        
+    }
 }
