@@ -1,7 +1,7 @@
 use super::block::Block;
 use super::expr::Expr;
-use super::param::Param;
 use super::field::Field;
+use super::param::Param;
 use crate::ast::Type;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,8 +27,6 @@ pub struct VaribleDecl {
     pub name: String,
     pub init: Option<Expr>,
 }
-
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructDecl {

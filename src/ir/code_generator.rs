@@ -5,10 +5,10 @@ use cranelift::prelude::*;
 use cranelift_module::{FuncId, Module};
 
 use crate::ast;
+use ast::declarations::StructDecl;
 use ast::expr::Expr;
 use ast::operators::{BinaryOp, UnaryOp};
 use ast::stmt::Stmt;
-use ast::declarations::StructDecl;
 
 use super::loop_info::LoopInfo;
 use super::struct_info::StructInfo;
@@ -38,17 +38,17 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
         let slot = match typ {
             ast::Type::Struct(struct_name) => {
                 let info = self.structs.get(struct_name).unwrap();
-                self.builder.create_sized_stack_slot(StackSlotData { 
-                    kind: StackSlotKind::ExplicitSlot, 
-                    size: info.size, 
+                self.builder.create_sized_stack_slot(StackSlotData {
+                    kind: StackSlotKind::ExplicitSlot,
+                    size: info.size,
                     align_shift: info.align as u8,
-                 })
+                })
             }
             _ => {
                 let _type = Self::clif_type(typ);
-                self.builder.create_sized_stack_slot(StackSlotData { 
-                    kind: StackSlotKind::ExplicitSlot, 
-                    size: _type.bytes(), 
+                self.builder.create_sized_stack_slot(StackSlotData {
+                    kind: StackSlotKind::ExplicitSlot,
+                    size: _type.bytes(),
                     align_shift: _type.bytes() as u8,
                 })
             }
@@ -196,8 +196,8 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
     fn _stmt_process(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::VaribleDecl(decl) => {
-                let typ = Self::clif_type(&decl.typ);
-                let slot = self.declare_variable(&decl.name, typ);
+                let _typ = Self::clif_type(&decl.typ);
+                let slot = self.declare_variable(&decl.name, &decl.typ);
                 if let Some(init_value) = &decl.init {
                     let value = self.generate_expr(init_value);
                     self.builder.ins().stack_store(value, slot, 0);
@@ -419,8 +419,47 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
                     .ins()
                     .load(types::I32, MemFlags::new(), addr, 0)
             }
-            Expr::Member(_obj, _member) | Expr::PointerMember(_obj, _member) => {
-                panic!("暂不支持：没有布局信息");
+            Expr::Member(obj, member) => {
+                let (obj_slot, obj_type) = match obj.as_ref() {
+                    Expr::Identifier(name) => {
+                        let slot = *self.variables.get(name).unwrap();
+                        let typ = self.variable_types.get(name).unwrap().clone();
+                        (slot, typ)
+                    }
+                    _ => panic!("Error access"),
+                };
+                let struct_name = match &obj_type {
+                    ast::Type::Struct(name) => name.clone(),
+                    _ => panic!("Member access on nonstructure type"),
+                };
+                let info = self.structs.get(&struct_name).unwrap();
+                let (field_typ, offset) = info.fields.get(member).unwrap();
+                let obj_ptr = self.builder.ins().stack_addr(types::I64, obj_slot, 0);
+                let off_value = self.builder.ins().iconst(types::I64, *offset as i64);
+                let field_ptr = self.builder.ins().iadd(obj_ptr, off_value);
+                self.builder
+                    .ins()
+                    .load(Self::clif_type(field_typ), MemFlags::new(), field_ptr, 0)
+            }
+            Expr::PointerMember(obj, member) => {
+                let obj_ptr = self.generate_expr(obj);
+                let struct_name = match obj.as_ref() {
+                    Expr::Identifier(name) => match self.variable_types.get(name).unwrap() {
+                        ast::Type::Pointer(i) => match i.as_ref() {
+                            ast::Type::Struct(_struct) => _struct.clone(),
+                            _ => panic!("\"->\" Should be used on struct type"),
+                        },
+                        _ => panic!("\"->\" should be used on a pointer type"),
+                    },
+                    _ => panic!("Too complex, We now don't support"),
+                };
+                let info = self.structs.get(&struct_name).unwrap();
+                let (field_typ, offset) = info.fields.get(member).unwrap();
+                let off_value = self.builder.ins().iconst(types::I64, *offset as i64);
+                let field_ptr = self.builder.ins().iadd(obj_ptr, off_value);
+                self.builder
+                    .ins()
+                    .load(Self::clif_type(field_typ), MemFlags::new(), field_ptr, 0)
             }
             Expr::Ternary(condition, then_expr, else_expr) => {
                 let then_block = self.builder.create_block();
@@ -466,41 +505,9 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
         }
     }
 
-    /// 计算布局。
-    fn type_size_align(&self, typ: &ast::Type) -> (u32, u32) {
-        match typ {
-            ast::Type::Char => (1, 1),
-            ast::Type::Short => (2, 2),
-            ast::Type::Int | ast::Type::Float => (4, 4),
-            ast::Type::Long | ast::Type::Double | ast::Type::Pointer(_) => (8, 8),
-            ast::Type::Struct(name) => {
-                let info = self.structs.get(name).unwrap();
-                (info.size, info.align)
-            }
-            ast::Type::Signed | ast::Type::Unsigned | ast::Type::Void => (4, 4),
-        }
-    }
-
-    fn calcuate_struct_layout(&self, decl: &StructDecl) -> StructInfo {
-        let mut fields = HashMap::new();
-        let mut offset: u32 = 0;
-        let mut max_align: u32 = 1;
-
-        for field in &decl.fields {
-            let (size, align) = self.type_size_align(&field.typ);
-            offset = ((offset + align - 1) / align) * align;
-            fields.insert(field.name.clone(), (field.typ.clone(), offset));
-            offset += size;
-            if align > max_align {
-                max_align = align;
-            }
-        }
-        let size = ((offset + max_align - 1) / max_align) * max_align;
-        StructInfo { size: size, align: max_align, fields: fields }
-    }
-///
-/// # 返回类型的字节。
-/// # Return usize
+    ///
+    /// # 返回类型的字节。
+    /// # Return usize
     fn sizeof(&self, typ: &ast::Type) -> usize {
         match typ {
             ast::Type::Char => 1,
@@ -509,12 +516,9 @@ impl<'a, MODULE: Module> CodeGenerator<'a, MODULE> {
             ast::Type::Long | ast::Type::Double => 8,
             ast::Type::Pointer(_) => 8,
             ast::Type::Signed | ast::Type::Unsigned | ast::Type::Void => 4,
-            ast::Type::Struct(name) => {
-                self.structs.get(name).unwrap().size as usize
-            }
+            ast::Type::Struct(name) => self.structs.get(name).unwrap().size as usize,
         }
     }
-
 }
 
 /// ## 应该返回当前变量在cranelift::types里对应的Type。
@@ -535,3 +539,39 @@ pub fn clif_type(typ: &ast::Type) -> Type {
         _ => types::I32,
     }
 }
+    /// 计算布局。
+    fn type_size_align(structs:&HashMap<String, StructInfo>, typ: &ast::Type) -> (u32, u32) {
+        match typ {
+            ast::Type::Char => (1, 1),
+            ast::Type::Short => (2, 2),
+            ast::Type::Int | ast::Type::Float => (4, 4),
+            ast::Type::Long | ast::Type::Double | ast::Type::Pointer(_) => (8, 8),
+            ast::Type::Struct(name) => {
+                let info = structs.get(name).unwrap();
+                (info.size, info.align)
+            }
+            ast::Type::Signed | ast::Type::Unsigned | ast::Type::Void => (4, 4),
+        }
+    }
+
+pub fn calcuate_struct_layout(structs:&HashMap<String, StructInfo>, decl: &StructDecl) -> StructInfo {
+        let mut fields = HashMap::new();
+        let mut offset: u32 = 0;
+        let mut max_align: u32 = 1;
+
+        for field in &decl.fields {
+            let (size, align) = type_size_align(structs, &field.typ);
+            offset = ((offset + align - 1) / align) * align;
+            fields.insert(field.name.clone(), (field.typ.clone(), offset));
+            offset += size;
+            if align > max_align {
+                max_align = align;
+            }
+        }
+        let size = ((offset + max_align - 1) / max_align) * max_align;
+        StructInfo {
+            size: size,
+            align: max_align,
+            fields: fields,
+        }
+    }

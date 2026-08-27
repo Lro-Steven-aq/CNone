@@ -2,6 +2,7 @@ mod code_generator;
 mod loop_info;
 mod struct_info;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use cranelift::codegen::ir::UserFuncName;
@@ -16,9 +17,11 @@ use crate::ast;
 use crate::ast::declarations::Decl;
 use crate::ast::program::Program;
 use crate::ast::stmt::Stmt;
+use crate::ir::struct_info::StructInfo;
 
 use code_generator::CodeGenerator;
 use code_generator::clif_type;
+use code_generator::calcuate_struct_layout;
 
 /// ## 用来编译程序到目标文件。
 /// ### 缺失链接。
@@ -39,9 +42,13 @@ pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
     //        声明所有的函数，然后给予其定义，再，，，              ///
     // /////////////////////////////////////////////////////////
     let mut function_identifiers = HashMap::new();
+
+    // 借用检查器检查逃逸。
+    let structs: RefCell<HashMap<String, StructInfo>> = RefCell::new(HashMap::new());
     for decl in &program.decls {
-        if let Decl::Function(function) = decl {
-            let mut signature = module.make_signature();
+        match decl {
+            Decl::Function(function) => {
+                            let mut signature = module.make_signature();
 
             if function.return_type != ast::Type::Void {
                 signature
@@ -55,6 +62,18 @@ pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
                 .declare_function(&function.name, Linkage::Export, &signature)
                 .unwrap();
             function_identifiers.insert(function.name.clone(), function_identifier);
+            }
+            Decl::Varible(_variable) => {
+                // 全局变量，不予处理。
+                todo!("全局变量，不予处理。");
+            }
+            Decl::Struct(_struct) => {
+                let info = calcuate_struct_layout(&*structs.borrow(), _struct);
+                structs.borrow_mut().insert(_struct.name.clone(), info);
+            }
+            Decl::TypeDef(_) => {
+
+            }
         }
     }
     // /////////////////////////////////////////////////////////////
@@ -89,14 +108,14 @@ pub fn compile_program_to_bytecode(program: &Program) -> Vec<u8> {
                 function_identifiers: function_identifiers.clone(),
                 current_block_terminated: false,
                 loop_stack: Vec::new(),
-                structs: HashMap::new(),
+                structs: structs.take(),
             };
             // /////////////////////////////////////////////////////////
             // ///////              参数绑定与variables。          ///////
             // /////////////////////////////////////////////////////////
             for (index, param) in function.params.iter().enumerate() {
                 let typ = clif_type(&param.typ);
-                let slot = code_generator.declare_variable(&param.name, typ);
+                let slot = code_generator.declare_variable(&param.name, &param.typ);
                 let mut value = code_generator.builder.block_params(entry_block)[index];
                 // ///
                 let value_type = code_generator.builder.func.dfg.value_type(value);

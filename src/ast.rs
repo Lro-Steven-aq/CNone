@@ -1,11 +1,11 @@
+mod block;
 pub mod declarations;
 pub mod expr;
+mod field;
 pub mod operators;
+mod param;
 pub mod program;
 pub mod stmt;
-mod param;
-mod block;
-mod field;
 
 use std::collections::HashMap;
 
@@ -17,11 +17,11 @@ use crate::lexer::symbols::Symbol;
 use block::Block;
 use declarations::Decl;
 use declarations::FunctionDecl;
-use declarations::VaribleDecl;
 use declarations::StructDecl;
 use declarations::TypeDefDecl;
-use field::Field;
+use declarations::VaribleDecl;
 use expr::Expr;
+use field::Field;
 use operators::BinaryOp;
 use operators::UnaryOp;
 use param::Param;
@@ -37,7 +37,7 @@ use super::lexer::Token;
 pub struct Parser {
     tokens: Vec<Token>,
     position: usize,
-    typedefs: HashMap<String,Type>,
+    typedefs: HashMap<String, Type>,
 }
 
 impl Parser {
@@ -115,14 +115,14 @@ impl Parser {
     /// 解析结构体。
     fn parse_struct(&mut self) -> Decl {
         /*
-            struct STRUCT_NAME {
-                类型1 字段a;
-                类型2 字段b;
-                ...   ...;
-            };
-             ^ 注意分号。
-            struct STRUCT_NAME obj;
-         */
+           struct STRUCT_NAME {
+               类型1 字段a;
+               类型2 字段b;
+               ...   ...;
+           };
+            ^ 注意分号。
+           struct STRUCT_NAME obj;
+        */
         self.expect_keyword(Keyword::Struct);
         let name = self.expect_identifier();
         self.expect(Symbol::LBrace);
@@ -137,28 +137,25 @@ impl Parser {
             });
             self.expect(Symbol::Semicolon);
         }
-        self.advance();                          // }
+        self.advance(); // }
         self.expect(Symbol::Semicolon); // ;
         Decl::Struct(StructDecl {
             name: name,
             fields: fields,
         })
-
-
     }
 
     /// 解析typedef
     fn parse_typedef(&mut self) -> Decl {
         self.expect_keyword(Keyword::Typedef);
         let typ = self.parse_type();
-        let alias =  self.expect_identifier();
+        let alias = self.expect_identifier();
         self.expect(Symbol::Semicolon);
         self.typedefs.insert(alias.clone(), typ.clone());
         Decl::TypeDef(TypeDefDecl {
             typ: typ,
             alias: alias,
         })
-
     }
 
     /// 解析类型。
@@ -179,7 +176,7 @@ impl Parser {
                     self.advance();
                     typ
                 } else {
-                    panic!("Expected type, got \"{}\"",identifier);
+                    panic!("Expected type, got \"{}\"", identifier);
                 }
             }
             _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
@@ -379,7 +376,6 @@ impl Parser {
             }
         }
     }
-
 }
 
 impl Parser {

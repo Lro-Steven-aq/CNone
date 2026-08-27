@@ -15,5 +15,5 @@ pub enum Keyword {
     Sizeof,
 
     Struct,
-    Typedef
+    Typedef,
 }
