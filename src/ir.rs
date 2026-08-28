@@ -1,10 +1,5 @@
-mod code_generator;
-mod function_label;
-mod function_body;
-mod type_mapping;
-mod type_;
-mod signature;
 
+mod code_generator;
 use std::collections::HashMap;
 
 use crate::ast;

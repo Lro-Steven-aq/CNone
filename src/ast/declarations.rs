@@ -39,19 +39,3 @@ pub struct VaribleDecl {
 //     pub typ: Type,
 //     pub alias: String,
 // }
-
-
-
-
-
-impl ToString for VaribleDecl {
-    fn to_string(&self) -> String {
-        match self.init.clone().unwrap() {
-            Expr::Integer(i) => return format!("PUSH {:?}", i),
-            Expr::Char(c) => return format!("PUSH {:?}", c),
-            Expr::Float(f) => return format!("PUSH {:?}", f),
-            _ => panic!("Unsupported Data Type."),
-        }
-        
-    }
-}

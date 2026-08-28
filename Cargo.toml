@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# bincode = "3.0.0" ---> 原作者的抗议版本。https://xkcd.com/2347/
 clap = "4.6.6"   # 用于在main.rs里面解析命令行参数。
+postcard = "1.1.3"
+serde = { version = "1.0.229", feature = ["derive"] }
