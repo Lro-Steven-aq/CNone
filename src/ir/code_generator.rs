@@ -1,4 +1,10 @@
-use crate::ast::{block::Block, declarations::{Decl, FunctionDecl, VaribleDecl}, program::Program, stmt::Stmt};
+use crate::ast::{
+    block::Block, declarations::{
+        Decl, 
+        FunctionDecl, 
+        VaribleDecl
+    }, expr::Expr, program::Program, stmt::Stmt
+};
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -89,60 +95,68 @@ impl CodeGenerator {
         }
         result
     }
+    
     fn generate_variable(&self, variable: VaribleDecl) -> String {
         unimplemented!()
     }
 }
 /*
-
+例如：
 MAIN:
     # START
     PUSH INT 1
     PUSH INT 2              # 前面有类型的，是数字或字符；否则是操作数栈的索引。
     ADD
-    CALL ECHO 0             # 数字三，没有换行。ECHO S是内置函数。 0是操作数栈的索引。
+    CALL ECHO
     PUSH INT 4
     GT
     JUMP X
 X:
     JUMP W
-    ECHO INT 7
+    CALL ECHO
 W:
-    JUMPIF X            # if true
-    COPY
-    EQ
-    CALL ECHO 0             # 1
-    VARIABLE [V] INT 8
-    SET [V] 9
-    VARIABLE INC [V]
-    CALL ECHO [V]
-    CALL FUNC [V]           # 移动至操作数栈顶
-    VARIABLE REMOVE [V]
-    RETURN                     # 退出函数
-
-FUNC:
-    CALL ECHO 0
-    VARIABLE [X] 0
-    POP
-    VARIABLE REMOVE [X]
-    RETURN
+    CALL ECHO
 */
 
 
 
 
 ///
-/// PUSH INT 2
-/// PUSH INT 5
-/// LABEL:
-///     COPY                    [2, 5, 5]
-///     PUSH INT 2              [2, 5, 5, 2]
-///     GT                      [1]
-///     JUMPIF LABEL
-///     
+/// for (int i = 0; i < 10; i++) {
+///     echo(i)
+/// }
+/// ///////////////////////////////
+/// Implements:
+/// ///////////////////////////////
+/// MAIN:
+///     PUSH INT 0          [0]
+///     COPY                [0,0]
+///     PUSH INT 10         [0,0,10]
+/// loop_body:
+///     LT                  [0,1]   [0,1]
+///     JUMPIF true_label   [0,1]
+/// 
+/// true_label:
+///     PUSH INT 10         [0,1,10]
+///     LT                  [0,1]
+///     JUMPIF loop_body
+/// 
 /// ## []
 impl CodeGenerator {
-    fn generate_while(condition: Expr, body: Box<Stmt>) -> String {
-        format!("JUMP\n{}\n")
+    fn generate_while(&mut self, condition: Expr, body: Box<Stmt>) -> String {
+        // format!("JUMP\n{}\n")
+        unimplemented!()
+    }
+    fn generate_return(&mut self, value: Option<Expr>) -> String {
+        unimplemented!()
+    }
+    fn generate_if(&mut self, condition: Expr, then_block: Box<Stmt>, else_block: Option<Box<Stmt>>) -> String {
+        unimplemented!()
+    }
+    fn generate_for(&mut self, init: Option<Expr>, condition: Option<Expr>, step: Option<Expr>, body: Box<Stmt>) -> String {
+        unimplemented!()
+    }
+    fn generate_expr(&mut self, expr: Expr) -> String {
+        unimplemented!()
     }
 }

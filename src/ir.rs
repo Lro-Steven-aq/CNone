@@ -1,5 +1,8 @@
 
 mod code_generator;
+pub mod variable_slot_table;
+pub mod types;
+pub mod value;
 use std::collections::HashMap;
 
 use crate::ast;
