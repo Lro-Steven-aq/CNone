@@ -36,7 +36,7 @@ fn test_variable_slot_table() {
     println!("### {:#?}", table);
     let mut m = table.get_variable(0);
     println!("m: {:#?}", m);
-    m.set_value(90, None);
+    m.set_value(90, None, None);
     table.set_variable(0, m);
     println!("### {:#?}", table);
 }

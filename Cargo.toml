@@ -8,3 +8,4 @@ edition = "2024"
 clap = "4.6.6"   # 用于在main.rs里面解析命令行参数。
 postcard = "1.1.3"
 serde = { version = "1.0.229", feature = ["derive"] }
+num-integer = "0.1"
