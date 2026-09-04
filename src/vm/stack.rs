@@ -23,20 +23,81 @@ impl OperationStack {
             }
         )
     }
+
+    fn _pop(&mut self) -> Value {
+        self.stack.pop().expect(ERROR_MESSAGE_NOT_ENOUGH)
+    }
+
     pub fn clear(&mut self) {
         self.stack.clear();
     }
     
     pub fn add(&mut self) {
-        let right = self.stack.pop().expect(ERROR_MESSAGE_NOT_ENOUGH);
-        let left = self.stack.pop().expect(ERROR_MESSAGE_NOT_ENOUGH);
+        let right = self._pop();
+        let left = self._pop();
         self.stack.push(left + right);
     }
 
     pub fn sub(&mut self) {
-        let right = self.stack.pop().expect(ERROR_MESSAGE_NOT_ENOUGH);
-        let left = self.stack.pop().expect(ERROR_MESSAGE_NOT_ENOUGH);
+        let right = self._pop();
+        let left = self._pop();
         self.stack.push(left - right);
+    }
+
+    pub fn mul(&mut self) {
+        let right = self._pop();
+        let left = self._pop();
+        self.stack.push(left * right);
+    }
+
+    pub fn div(&mut self) {
+        let right = self._pop();
+        let left = self._pop();
+        self.stack.push(left / right);
+    }
+
+    pub fn lt(&mut self) {
+        let right = self._pop();
+        let left = self._pop();
+        let mut value = Value::new(Type::INT);
+        self.stack.push(
+            if left < right {value.set_value(1, None, None); value}
+            else {value.set_value(0, None, None); value}
+        );
+    }
+
+    pub fn le(&mut self) {
+        let right = self._pop();
+        let left = self._pop();
+        let mut value = Value::new(Type::INT);
+        self.stack.push(
+            if left <= right {value.set_value(1, None, None); value}
+            else {value.set_value(0, None, None); value}
+        );
+    }
+
+    pub fn gt(&mut self) {
+        let right = self._pop();
+        let left = self._pop();
+        let mut value = Value::new(Type::INT);
+        self.stack.push(
+            if left > right {value.set_value(1, None, None); value}
+            else {value.set_value(0, None, None); value}
+        );
+    }
+
+    pub fn ge(&mut self) {
+        let right = self._pop();
+        let left = self._pop();
+        let mut value = Value::new(Type::INT);
+        self.stack.push(
+            if left >= right {value.set_value(1, None, None); value}
+            else {value.set_value(0, None, None); value}
+        );
+    }
+
+    pub fn jumpif(&mut self) {
+        unimplemented!()
     }
 
 }
@@ -70,5 +131,13 @@ fn test_operation_stack() {
     println!("{}", stack);
     stack.add();
     println!("{}", stack);
+    stack.push(l);
+    stack.push(r);
+    println!("{}", stack);
+    stack.sub();
+    println!("{}", stack);
+    stack.mul();
+    println!("{}", stack);
+
 
 }

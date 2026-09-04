@@ -14,6 +14,21 @@ pub struct Value {
 }
 
 // from i32/f32
+// impl From <i128, i64, f64, ...>
+impl From<f64> for Value {
+    fn from(value: f64) -> Self {
+        let mut result = Value::new(Type::FLOAT);
+        for (index, el) in value.to_string().split('.').enumerate() {
+            if index == 0 {
+                result.set_value(el.parse().unwrap(), Some(0), None);
+            }
+            if index == 1 {
+                result.set_value(result.content, Some(el.parse().unwrap()), Some(el.len()));
+            }
+        }
+        result
+    }
+}
 impl From<Type> for Value {
     fn from(value: Type) -> Self {
         match value {
@@ -137,19 +152,120 @@ impl Sub for Value {
 }
 impl Mul for Value {
     type Output = Self;
-    fn mul(self, rhs: Self) -> Self::Output {
-        let _v = self.to_string();
-        let v = _v.parse::<f64>().unwrap();
-
-        unimplemented!()
+    fn mul(mut self, rhs: Self) -> Self::Output {
+        let mut rhs = rhs;
+        // regard character as integer.
+        let mut is_self_char = false;
+        let mut is_rhs_char = false;
+        if self.typ == Type::CHAR{
+            is_self_char = true;
+            self.typ = Type::INT;
+        }
+        if rhs.typ == Type::CHAR {
+            is_rhs_char = true;
+            rhs.typ = Type::INT;
+        }
+        let self_num = self.to_string();
+        let  rhs_num= rhs.to_string();
+        let result = Self::from(self_num.parse::<f64>().unwrap() * rhs_num.parse::<f64>().unwrap());
+        
+        if is_self_char {self.set_type(Type::CHAR);}
+        if is_rhs_char {rhs.set_type(Type::CHAR);}
+        
+        result
     }
 }
 impl Div for Value {
     type Output = Self;
-    fn div(self, rhs: Self) -> Self::Output {
-        unimplemented!()
+    fn div(mut self, rhs: Self) -> Self::Output {
+        let mut rhs = rhs;
+        // regard character as integer.
+        let mut is_self_char = false;
+        let mut is_rhs_char = false;
+        if self.typ == Type::CHAR{
+            is_self_char = true;
+            self.typ = Type::INT;
+        }
+        if rhs.typ == Type::CHAR {
+            is_rhs_char = true;
+            rhs.typ = Type::INT;
+        }
+        let self_num = self.to_string();
+        let  rhs_num= rhs.to_string();
+        let result = Self::from(self_num.parse::<f64>().unwrap() / rhs_num.parse::<f64>().unwrap());
+        
+        if is_self_char {self.set_type(Type::CHAR);}
+        if is_rhs_char {rhs.set_type(Type::CHAR);}
+        
+        result
     }
 }
+// impl PartialEq for Value {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.content == other.content && 
+//         self.extend == other.extend && 
+//         self.length == other.length
+//     }
+// }
+impl Eq for Value {}
+impl PartialOrd for Value {
+    fn ge(&self, other: &Self) -> bool {
+        let mut _self = self.clone();
+        let mut _other = other.clone();
+        let mut is_self_char = false;
+        let mut is_other_char = false;
+
+        if _self.typ == Type::CHAR {
+            is_self_char = true;
+            _self.typ = Type::INT;
+        }
+        if _other.typ == Type::CHAR {
+            is_other_char = true;
+            _other.typ = Type::INT;
+        }
+
+        let result = _self.to_string().parse::<f64>().unwrap() >= _other.to_string().parse::<f64>().unwrap();
+        if is_self_char {_self.typ = Type::CHAR;}
+        if is_other_char {_other.typ = Type::CHAR;}
+        result
+    }
+    fn lt(&self, other: &Self) -> bool {
+      !self.ge(other)  
+    }
+    fn gt(&self, other: &Self) -> bool {
+        let mut _self = self.clone();
+        let mut _other = other.clone();
+        let mut is_self_char = false;
+        let mut is_other_char = false;
+
+        if _self.typ == Type::CHAR {
+            is_self_char = true;
+            _self.typ = Type::INT;
+        }
+        if _other.typ == Type::CHAR {
+            is_other_char = true;
+            _other.typ = Type::INT;
+        }
+
+        let result = _self.to_string().parse::<f64>().unwrap() > _other.to_string().parse::<f64>().unwrap();
+        if is_self_char {_self.typ = Type::CHAR;}
+        if is_other_char {_other.typ = Type::CHAR;}
+        result
+    }
+    fn le(&self, other: &Self) -> bool {
+        !self.gt(other)
+    }
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self > other {
+            Some(std::cmp::Ordering::Greater)
+        } else if self < other {
+            Some(std::cmp::Ordering::Less)
+        } else {
+            Some(std::cmp::Ordering::Equal)
+        }
+    }
+}
+
 // impl ToString for Value {
 //     fn to_string(&self) -> String {
 //         let mut globalresult_ = String::new();
@@ -234,6 +350,13 @@ impl Value {
     pub fn get_type(&self) -> Type {
         self.typ
     }
+    pub fn get_extend(&self) -> Option<u128> {
+        self.extend
+    }
+    pub fn get_content(&self) -> i128 {
+        self.content
+    }
+    
 }
 
 #[test]
@@ -250,14 +373,24 @@ fn test_value_display() {
 fn test_value_operations() {
     let mut m = Value::new(Type::FLOAT);
     let mut n = Value::new(Type::FLOAT);
-    m.set_value(10, Some(9), None);
-    n.set_value(8, Some(9), None);
+    m.set_value(10, Some(9), None); // m = 10.9
+    n.set_value(8, Some(9), None); // n = 8.9
 
-    // 加法。----------------------------->>>>>>>没有进位
-    let x = m + n;
-    debug_assert_eq!(x, 
+    // 加法
+    debug_assert_eq!(m + n, 
         Value { typ: Type::FLOAT, content: 19, extend: Some(8), length: Some(1)});
     // 减法。----------------------------->>>>>>>>没有退位
-    let y = m - n;
-    debug_assert_eq!(y, Value { typ: Type::FLOAT, content: 2, extend: Some(0), length: Some(1)});
+    debug_assert_eq!(m - n, Value { typ: Type::FLOAT, content: 2, extend: Some(0), length: Some(1)});
+    // from f64
+    debug_assert_eq!(Value::from(2.00), 
+        Value { content:2, extend: Some(0), typ: Type::FLOAT, length: Some(1)});
+    // mul
+    debug_assert_eq!(m * n, 
+        Value {content: 97, typ: Type::FLOAT, extend: Some(1), length: Some(2)});
+    m.set_value(8, Some(4), Some(1));
+    n.set_value(2, Some(1), None);
+    debug_assert_eq!(m / n, 
+        Value {content: 4, typ: Type::FLOAT, extend: Some(0), length: Some(1)});
+    debug_assert!(m > n);
+    
 }
