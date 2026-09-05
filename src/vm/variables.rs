@@ -1,3 +1,8 @@
+//! 
+//! 变量表。
+//! 其成员slots: VariableTable是其具体实现
+//! 
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use crate::ir::variable_slot_table::{Index, Slot, VariableTable};
@@ -5,7 +10,7 @@ use crate::ir::value::Value;
 use crate::ir::types::Type;
 use crate::vm::stack::OperationStack;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VariablesSlotTable {
     slots: VariableTable,
 }

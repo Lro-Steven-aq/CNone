@@ -13,7 +13,9 @@ pub enum Keyword {
     Default,
     Goto, // Warning!
     Sizeof,
+    // // struct, typedef are not support.
+    // Struct,
+    // Typedef,
 
-    Struct,
-    Typedef,
+    Function,
 }

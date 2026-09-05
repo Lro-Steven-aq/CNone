@@ -1,7 +1,7 @@
 use crate::{ast};
 
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     CHAR,
     INT,

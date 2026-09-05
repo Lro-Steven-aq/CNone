@@ -1,3 +1,4 @@
+//! 这是函数标签，它代表一个函数/标签（非内置）
 //! ## 这是一个 `For` 循环:
 //! ```ignore
 //! init:
@@ -16,10 +17,39 @@
 //!     FUNCTION-BODY
 //!     JUMP func1
 //! ```
+
+use crate::ir::{instructions::Instruction, variable_slot_table::Index};
+use crate::ir::instructions::FunctionName;
 // use super::Stmt;
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionLabel {
     name: String,
-    // stmts: Vec<Stmt>,  function body
-    //body: Body,
+    position: Index,  //   函数标签开始处。func1:
+    instructions: Vec<Instruction>,
 }
+
+impl FunctionLabel {
+    pub fn new(index: Index, instructions: Vec<Instruction>, name: String) -> Self {
+        let name = instructions[index].clone();
+        if let Instruction::_FUNCTION_LABEL__(function_name) = name {
+            Self { name: function_name, position: index, instructions: instructions }
+        } else {
+            panic!("Error @Function Index")
+        }
+    }
+    
+    pub fn get_index(&self) -> usize {
+        self.position
+    }
+
+    pub fn build(value: FunctionName) -> Self {
+        panic!("You Should Call FunctionLabel::new externally");
+    }
+}
+
+// impl From<FunctionName> for FunctionLabel {
+//     fn from(value: FunctionName) -> Self {
+//         // build it
+
+//     }
+// }

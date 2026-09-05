@@ -127,8 +127,9 @@ impl Lexer {
             "default" => TokenType::Keyword(Keyword::Default),
             "goto" => TokenType::Keyword(Keyword::Goto),
             "sizeof" => TokenType::Keyword(Keyword::Sizeof),
-            "struct" => TokenType::Keyword(Keyword::Struct),
-            "typedef" => TokenType::Keyword(Keyword::Typedef),
+            // "struct" => TokenType::Keyword(Keyword::Struct),
+            // "typedef" => TokenType::Keyword(Keyword::Typedef),
+            "function" => TokenType::Keyword(Keyword::Function),
             //如果什么都不是，那么将被认定为合法标识符。
             _ => TokenType::Identifer(word),
         }
@@ -455,4 +456,28 @@ impl Token {
     pub fn get_column(&self) -> usize {
         self.column
     }
+}
+#[test]
+fn test_lexer() {
+    let mut lexer = Lexer::new(r#"
+    function main () {
+        int a = 9;
+        print(a);
+    }
+    function print(int args){
+        if (a<0){echo("a>0");}
+        else{}
+        echo(a);
+    }
+    
+    "#);
+    let mut tokens = Vec::new();
+    loop {
+        let token = lexer.get_next_token();
+        tokens.push(token.clone());
+        if token.get_token_type() == TokenType::EOF {
+            break;
+        }
+    }
+    println!("{:#?}", tokens);
 }

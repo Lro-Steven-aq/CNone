@@ -60,8 +60,8 @@ impl Parser {
 
     fn parse_decl(&mut self) -> Decl {
         match self.peek() {
-            TokenType::Keyword(Keyword::Struct) => self.parse_struct(),
-            TokenType::Keyword(Keyword::Typedef) => self.parse_typedef(),
+            // TokenType::Keyword(Keyword::Struct) => self.parse_struct(),
+            // TokenType::Keyword(Keyword::Typedef) => self.parse_typedef(),
             _ => self.parse_functions_or_variables(),
         }
     }
@@ -112,54 +112,54 @@ impl Parser {
         }
     }
 
-    /// 解析结构体。
-    fn parse_struct(&mut self) -> Decl {
-        /*
-           struct STRUCT_NAME {
-               类型1 字段a;
-               类型2 字段b;
-               ...   ...;
-           };
-            ^ 注意分号。
-           struct STRUCT_NAME obj;
-        */
-        self.expect_keyword(Keyword::Struct);
-        let name = self.expect_identifier();
-        self.expect(Symbol::LBrace);
+    // /// 解析结构体。
+    // fn parse_struct(&mut self) -> Decl {
+    //     /*
+    //        struct STRUCT_NAME {
+    //            类型1 字段a;
+    //            类型2 字段b;
+    //            ...   ...;
+    //        };
+    //         ^ 注意分号。
+    //        struct STRUCT_NAME obj;
+    //     */
+    //     self.expect_keyword(Keyword::Struct);
+    //     let name = self.expect_identifier();
+    //     self.expect(Symbol::LBrace);
 
-        // let mut fields = Vec::new();
-        while self.peek() != TokenType::Symbol(Symbol::RBrace) {
-            let typ = self.parse_type();
-            let field_name = self.expect_identifier();
-            // fields.push(Field {
-            //     name: field_name,
-            //     typ: typ,
-            // });
-            panic!("Unsupport Struct .");
-            // self.expect(Symbol::Semicolon);
-        }
-        self.advance(); // }
-        self.expect(Symbol::Semicolon); // ;
-        // Decl::Struct(StructDecl {
-        //     name: name,
-        //     fields: fields,
-        // })
-        panic!("Unsupport Struct.")
-    }
+    //     // let mut fields = Vec::new();
+    //     while self.peek() != TokenType::Symbol(Symbol::RBrace) {
+    //         let typ = self.parse_type();
+    //         let field_name = self.expect_identifier();
+    //         // fields.push(Field {
+    //         //     name: field_name,
+    //         //     typ: typ,
+    //         // });
+    //         panic!("Unsupport Struct .");
+    //         // self.expect(Symbol::Semicolon);
+    //     }
+    //     self.advance(); // }
+    //     self.expect(Symbol::Semicolon); // ;
+    //     // Decl::Struct(StructDecl {
+    //     //     name: name,
+    //     //     fields: fields,
+    //     // })
+    //     panic!("Unsupport Struct.")
+    // }
 
     /// 解析typedef
-    fn parse_typedef(&mut self) -> Decl {
-        self.expect_keyword(Keyword::Typedef);
-        let typ = self.parse_type();
-        let alias = self.expect_identifier();
-        self.expect(Symbol::Semicolon);
-        self.typedefs.insert(alias.clone(), typ.clone());
-        // Decl::TypeDef(TypeDefDecl {
-        //     typ: typ,
-        //     alias: alias,
-        // })
-        panic!("Unsupport Typedef .");
-    }
+    // fn parse_typedef(&mut self) -> Decl {
+    //     self.expect_keyword(Keyword::Typedef);
+    //     let typ = self.parse_type();
+    //     let alias = self.expect_identifier();
+    //     self.expect(Symbol::Semicolon);
+    //     self.typedefs.insert(alias.clone(), typ.clone());
+    //     // Decl::TypeDef(TypeDefDecl {
+    //     //     typ: typ,
+    //     //     alias: alias,
+    //     // })
+    //     panic!("Unsupport Typedef .");
+    // }
 
     /// 解析类型。
     /// int char void char* int* struct STRUCT_NAME FILE*
@@ -169,11 +169,11 @@ impl Parser {
                 self.advance();
                 t
             }
-            TokenType::Keyword(Keyword::Struct) => {
-                self.advance();
-                let name = self.expect_identifier();
-                Type::Struct(name)
-            }
+            // TokenType::Keyword(Keyword::Struct) => {
+            //     self.advance();
+            //     let name = self.expect_identifier();
+            //     Type::Struct(name)
+            // }
             TokenType::Identifer(identifier) => {
                 if let Some(typ) = self.typedefs.get(&identifier).cloned() {
                     self.advance();
@@ -630,4 +630,27 @@ impl Parser {
             _ => panic!("Unexpected token: {:#?}", self.tokens[self.position]), // 其他鬼魂直接报错。什么魑魅魍魉管他呢。
         }
     }
+}
+
+
+#[test]
+fn test_ast() {
+    use crate::lexer::Lexer;
+    let mut lexer = Lexer::new(r#"
+    function main(){
+        int a= 9;
+        print(a);
+    }
+    "#);
+    let mut tokens = Vec::new();
+    loop {
+        let token = lexer.get_next_token();
+        tokens.push(token.clone());
+        if token.get_token_type() == TokenType::EOF {
+            break;
+        }
+    }
+    let mut parser = Parser::new(tokens);
+    let program = parser.parse();
+    println!("{:#?}", program);
 }

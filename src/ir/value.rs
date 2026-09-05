@@ -1,7 +1,10 @@
-
+//!
+//! 这是IR和VM阶段的值。
+//! 它是OperationStack和VariableSlotTable所存储的类型。
+//! 其可以表现INT/FLOAT/CHAR三个类型。
+//! 
 use std::{cmp::max, fmt::Display, ops::{Add, Div, Mul, Sub}};
 
-use num_integer::div_floor;
 
 use crate::ir::types::Type;
 

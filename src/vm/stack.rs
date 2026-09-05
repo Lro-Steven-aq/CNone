@@ -1,6 +1,10 @@
-use std::{fmt::{Display, write}, sync::OnceLock};
+//!
+//! 这是一个操作数栈。
+//! 先进后出。
 
-use crate::ir::{types::Type, value::Value, variable_slot_table::Index};
+use std::fmt::Display;
+
+use crate::{ir::{types::Type, value::Value, variable_slot_table::Index}, vm::function_label::FunctionLabel};
 
 
 const ERROR_MESSAGE_NOT_ENOUGH: &str = "Arguments numbers doesn't seem to be enough";
@@ -96,7 +100,11 @@ impl OperationStack {
         );
     }
 
-    pub fn jumpif(&mut self) {
+    pub fn jumpif(&mut self, label: FunctionLabel) {
+        unimplemented!()
+    }
+
+    pub fn jump(&mut self, label: FunctionLabel) {
         unimplemented!()
     }
 

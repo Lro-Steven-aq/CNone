@@ -1,6 +1,7 @@
 
 mod code_generator;
 mod util;
+pub mod instructions;
 pub mod function_label;
 pub mod variable_slot_table;
 pub mod types;
