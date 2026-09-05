@@ -110,9 +110,10 @@ impl Lexer {
             "double" => TokenType::Type(Type::Double),
             "short" => TokenType::Type(Type::Short),
             "long" => TokenType::Type(Type::Long),
-            "unsigned" => TokenType::Type(Type::Unsigned),
-            "signed" => TokenType::Type(Type::Signed),
+            // "unsigned" => TokenType::Type(Type::Unsigned),
+            // "signed" => TokenType::Type(Type::Signed),
             "void" => TokenType::Type(Type::Void),
+            "Noreturn" => TokenType::Type(Type::Noreturn),
             //再看是不是关键字
             "if" => TokenType::Keyword(Keyword::If),
             "else" => TokenType::Keyword(Keyword::Else),

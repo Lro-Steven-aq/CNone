@@ -1,0 +1,7 @@
+function main() Noreturn {
+    int a = 9;
+    if (a**2>0){
+        print(1);
+    }
+    print(a);
+}

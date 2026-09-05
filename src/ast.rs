@@ -69,18 +69,22 @@ impl Parser {
     /// 为了解决parse_decl函数的复杂性，我们将建立此函数。
     /// 此函数只解析函数或者是变量。
     fn parse_functions_or_variables(&mut self) -> Decl {
-        let _type = self.parse_type();
-        let name = self.expect_identifier();
+        // let _type = self.parse_type();
+        // let name = self.expect_identifier();
 
-        if self.peek() == TokenType::Symbol(Symbol::LParen) {
+        if self.peek() == TokenType::Keyword(Keyword::Function) {
             /*
-            int func(){
-                    ^此处是（因此认为是函数
+            function func(int a)int {
+                return a;
             }
              */
+            self.advance();
+            let function_name = self.expect_identifier();
             self.advance(); // 跳过"("
             let params = self.parse_params(); // params 是指形参，args是指实参。
             self.expect(Symbol::RParen); //  ")"
+            let _type = self.parse_type();
+            // self.expect(Symbol::LBrace);
 
             let body = if self.peek() == TokenType::Symbol(Symbol::Semicolon) {
                 self.advance();
@@ -91,12 +95,14 @@ impl Parser {
 
             Decl::Function(FunctionDecl {
                 return_type: _type,
-                name: name,
+                name: function_name,
                 params: params,
                 body: body,
             })
         } else {
             // 变量。
+            let _type = self.parse_type();
+            let name = self.expect_identifier();
             let init = if self.peek() == TokenType::Operater(Operator::Assign) {
                 self.advance();
                 Some(self.parse_expr())
@@ -174,14 +180,14 @@ impl Parser {
             //     let name = self.expect_identifier();
             //     Type::Struct(name)
             // }
-            TokenType::Identifer(identifier) => {
-                if let Some(typ) = self.typedefs.get(&identifier).cloned() {
-                    self.advance();
-                    typ
-                } else {
-                    panic!("Expected type, got \"{}\"", identifier);
-                }
-            }
+            // TokenType::Identifer(identifier) => {
+            //     if let Some(typ) = self.typedefs.get(&identifier).cloned() {
+            //         self.advance();
+            //         typ
+            //     } else {
+            //         panic!("Expected type, got \"{}\"", identifier);
+            //     }
+            // }
             _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
         };
         while self.peek() == TokenType::Operater(Operator::Star) {
@@ -254,7 +260,7 @@ impl Parser {
     }
     /// 解析一个代码块。
     /**
-     * ``c
+     * ``cnone
      * {
      *   int a;
      *   float b;
@@ -636,12 +642,8 @@ impl Parser {
 #[test]
 fn test_ast() {
     use crate::lexer::Lexer;
-    let mut lexer = Lexer::new(r#"
-    function main(){
-        int a= 9;
-        print(a);
-    }
-    "#);
+    use std::fs;
+    let mut lexer = Lexer::new(fs::read_to_string("test/test.cnone").unwrap().as_str());
     let mut tokens = Vec::new();
     loop {
         let token = lexer.get_next_token();

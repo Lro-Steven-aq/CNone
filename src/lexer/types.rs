@@ -23,24 +23,24 @@ pub enum Type {
     Double,
     Short,
     Long,
-    Unsigned,
-    Signed,
+    // Unsigned,
+    // Signed,
     Void,
 
-    Struct(String),
+    Noreturn,
 
     Pointer(Box<Type>), //  不是词法分析应该解析的类型，放在语法分析时处理。
 }
 
-impl Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Type::Char => write!(f, "CHAR"),
-            Type::Float | Type::Double => write!(f, "FLOAT"),
-            Type::Int | Type::Short |
-            Type::Long | Type::Signed => write!(f, "INT"),
-            Type::Unsigned | Type::Void => write!(f, "UINT"),
-            Type::Pointer(_) | Type::Struct(_) => panic!("Unsupport"),
-        }
-    }
-}
+// impl Display for Type {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             Type::Char => write!(f, "CHAR"),
+//             Type::Float | Type::Double => write!(f, "FLOAT"),
+//             Type::Int | Type::Short |
+//             Type::Long  => write!(f, "INT"),
+//             Type::Void => write!(f, "UINT"),
+//             Type::Pointer(_) | Type::Noreturn => panic!("Unsupport"),
+//         }
+//     }
+// }

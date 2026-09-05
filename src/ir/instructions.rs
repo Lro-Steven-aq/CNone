@@ -33,6 +33,7 @@ pub enum Instruction {
     INC,
     DEC,
     CLEAR,
+    #[allow(non_camel_case_types)]
     _FUNCTION_LABEL__(FunctionName),
     // ......
 }
