@@ -57,6 +57,8 @@ impl CodeGenerator {
         let label = FunctionLabel::new(self.functions.len(), function.name.clone());
         self.functions.insert(function.name.clone(), label);
 
+        self.bytecode.push(Instruction::_FUNCTION_LABEL__(function.name.clone()));
+
         if function.body != None {
             let block = function.body.unwrap();
             self.generate_block(block)?;
