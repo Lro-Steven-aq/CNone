@@ -30,7 +30,7 @@ impl VariablesSlotTable {
         // let __value = Value::new(Type::CHAR);
         // let typ = value.get_type();
         // __value.set_type(typ);
-        let slot = Slot { value };
+        let slot = Slot { value, index: index };
         self.slots.slots.insert(index, slot);
     }
 

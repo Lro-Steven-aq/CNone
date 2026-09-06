@@ -170,7 +170,7 @@ impl Parser {
     /// 解析类型。
     /// int char void char* int* struct STRUCT_NAME FILE*
     fn parse_type(&mut self) -> Type {
-        let mut base_type = match self.peek() {
+        let base_type = match self.peek() {
             TokenType::Type(t) => {
                 self.advance();
                 t
@@ -190,10 +190,10 @@ impl Parser {
             // }
             _ => panic!("Expected type: {:#?}", self.tokens[self.position]),
         };
-        while self.peek() == TokenType::Operater(Operator::Star) {
-            self.advance();
-            base_type = Type::Pointer(Box::new(base_type));
-        }
+        // while self.peek() == TokenType::Operater(Operator::Star) {
+        //     self.advance();
+        //     base_type = Type::Pointer(Box::new(base_type));
+        // }
         base_type
     }
 
@@ -222,6 +222,9 @@ impl Parser {
         }
         loop {
             let _type = self.parse_type();
+            if _type == Type::Noreturn {
+                panic!("\"Noreturn\" type should't be used in params");
+            }
             let identifier = self.expect_identifier();
             params.push(Param {
                 typ: _type,
@@ -642,16 +645,14 @@ impl Parser {
 #[test]
 fn test_ast() {
     use crate::lexer::Lexer;
+    use crate::lexer::get_tokens;
     use std::fs;
-    let mut lexer = Lexer::new(fs::read_to_string("test/test.cnone").unwrap().as_str());
+    use crate::preprocessor::Preprocessor;
+    let mut preprocesser = Preprocessor::new(fs::read_to_string("test/test.cnone").unwrap().as_str());
+    let source = preprocesser.preprocess();
+    let mut lexer = Lexer::new(source);
     let mut tokens = Vec::new();
-    loop {
-        let token = lexer.get_next_token();
-        tokens.push(token.clone());
-        if token.get_token_type() == TokenType::EOF {
-            break;
-        }
-    }
+    let token = get_tokens(&mut lexer);
     let mut parser = Parser::new(tokens);
     let program = parser.parse();
     println!("{:#?}", program);

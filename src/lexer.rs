@@ -112,7 +112,7 @@ impl Lexer {
             "long" => TokenType::Type(Type::Long),
             // "unsigned" => TokenType::Type(Type::Unsigned),
             // "signed" => TokenType::Type(Type::Signed),
-            "void" => TokenType::Type(Type::Void),
+            "void" => TokenType::Type(Type::Noreturn),  // void
             "Noreturn" => TokenType::Type(Type::Noreturn),
             //再看是不是关键字
             "if" => TokenType::Keyword(Keyword::If),
@@ -429,7 +429,7 @@ impl Lexer {
         }
     }
 
-    pub fn get_next_token(&mut self) -> Token {
+    fn get_next_token(&mut self) -> Token {
         self.skip_whitespace();
 
         let typ = match self.current {
@@ -458,6 +458,19 @@ impl Token {
         self.column
     }
 }
+
+pub fn get_tokens(lexer: &mut Lexer) -> Result<Vec<Token>, ()> {
+    let mut tokens = Vec::new();
+    loop {
+        let token = lexer.get_next_token();
+        tokens.push(token.clone());
+        if token.get_token_type() == TokenType::EOF {
+            break;
+        }
+    }
+    Ok(tokens)
+}
+
 #[test]
 fn test_lexer() {
     let mut lexer = Lexer::new(r#"

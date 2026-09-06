@@ -14,9 +14,8 @@ impl From<ast::Type> for Type {
             ast::Type::Char => Type::CHAR,
             ast::Type::Float | ast::Type::Double => Type::FLOAT,
             ast::Type::Int | ast::Type::Long |
-            ast::Type::Short | ast::Type::Void | 
-            ast::Type::Noreturn => Type::INT,
-            ast::Type::Pointer(_) => panic!("Unsupported type"),
+            ast::Type::Short | ast::Type::Noreturn => Type::INT,
+            
 
         }
     }

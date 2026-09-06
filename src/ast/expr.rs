@@ -1,4 +1,4 @@
-use core::task;
+
 use std::fmt::Display;
 
 use super::operators::BinaryOp;
@@ -43,7 +43,7 @@ impl Expr {
             Expr::Char(_) => Type::Char,
             Expr::Float(_) => Type::Float,
             Expr::Integer(_) => Type::Int,
-            _ => Type::Void,
+            _ => Type::Noreturn,
         }
     }
 }

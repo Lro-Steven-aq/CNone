@@ -25,11 +25,11 @@ pub enum Type {
     Long,
     // Unsigned,
     // Signed,
-    Void,
+    // Void,
 
     Noreturn,
 
-    Pointer(Box<Type>), //  不是词法分析应该解析的类型，放在语法分析时处理。
+    // Pointer(Box<Type>), //  不是词法分析应该解析的类型，放在语法分析时处理。
 }
 
 // impl Display for Type {

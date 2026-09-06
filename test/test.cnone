@@ -1,7 +1,9 @@
-function main() Noreturn {
+function main(int n/*, Noreturn d*/) Noreturn {
     int a = 9;
-    if (a**2>0){
+    /*
+    if (a*a>0){ // true
         print(1);
     }
-    print(a);
+    */
+    print(9);
 }

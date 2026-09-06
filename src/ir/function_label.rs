@@ -25,17 +25,12 @@ use crate::ir::instructions::FunctionName;
 pub struct FunctionLabel {
     name: String,
     position: Index,  //   函数标签开始处。func1:
-    instructions: Vec<Instruction>,
+   // instructions: Vec<Instruction>,
 }
 
 impl FunctionLabel {
-    pub fn new(index: Index, instructions: Vec<Instruction>, name: String) -> Self {
-        let name = instructions[index].clone();
-        if let Instruction::_FUNCTION_LABEL__(function_name) = name {
-            Self { name: function_name, position: index, instructions: instructions }
-        } else {
-            panic!("Error @Function Index")
-        }
+    pub fn new(index: Index, name: String) -> Self {
+            Self { name: name, position: index, }
     }
     
     pub fn get_index(&self) -> usize {

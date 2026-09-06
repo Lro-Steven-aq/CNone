@@ -12,4 +12,5 @@ pub struct VariableTable {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Slot {
     pub value: Value,
+    pub index: usize,
 }

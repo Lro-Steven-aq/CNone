@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct Error {
-    msg: String,
-    code: u8,
+    pub msg: String,
+    pub code: u8,
 }
 impl std::error::Error for Error {
     fn cause(&self) -> Option<&dyn std::error::Error> {

@@ -15,14 +15,16 @@ pub type FunctionName = String;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
-    PUSH(Type, i128),   //  PUSH INT 10
+    PUSH(Value),   //  PUSH INT 10
     POP,
     LOAD(usize),
-    STORE(Value, usize),
+    STORE(usize),
     GT,
     GE,
     LT,
     LE,
+    EQ,
+    NE,
     CALL(FunctionName),
     JUMP(FunctionLabel),
     JUMPIF(FunctionLabel),
@@ -30,6 +32,7 @@ pub enum Instruction {
     SUB,
     MUL,
     DIV,
+    MOD,
     INC,
     DEC,
     CLEAR,
